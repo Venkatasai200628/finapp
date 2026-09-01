@@ -4,6 +4,9 @@ import path from 'path';
 const DB_FILE = path.join(__dirname, '..', 'fin-data.json');
 const MAX_STORED = 500;
 
+/** What the user said about a flagged transaction, once they reviewed it. */
+export type Verdict = 'safe' | 'fraud';
+
 export type StoredTransaction = {
   id: string;
   merchant: string;
@@ -13,6 +16,7 @@ export type StoredTransaction = {
   severity: 'good' | 'warn' | 'danger';
   reasons: string; // JSON-encoded string[], kept as string to mirror a real DB column
   source: 'simulator' | 'account_aggregator' | 'sms';
+  verdict?: Verdict | null;
 };
 
 function load(): StoredTransaction[] {
@@ -45,4 +49,19 @@ export function listFlagged(limit = 50): StoredTransaction[] {
     .filter((t) => t.severity === 'danger')
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, limit);
+}
+
+export function getTransaction(id: string): StoredTransaction | undefined {
+  return load().find((t) => t.id === id);
+}
+
+/** Records the user's review of a transaction. This is what feeds the
+ * baseline's learning set — see baseline.ts / isLearnable(). */
+export function setVerdict(id: string, verdict: Verdict): StoredTransaction | undefined {
+  const rows = load();
+  const row = rows.find((t) => t.id === id);
+  if (!row) return undefined;
+  row.verdict = verdict;
+  save(rows);
+  return row;
 }

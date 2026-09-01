@@ -7,6 +7,23 @@ import { io, Socket } from 'socket.io-client';
 // so it still works standalone with no backend running.
 export const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
 
+export type CategoryStats = {
+  category: string;
+  merchants: string[];
+  avgAmount: number;
+  stdDev: number;
+  sampleSize: number;
+};
+
+export type Baseline = {
+  categories: CategoryStats[];
+  normalHourStart: number;
+  normalHourEnd: number;
+  maxNormalAmount: number;
+  learnedFrom: number;
+  isLearned: boolean;
+};
+
 export function createBackendSocket(): Socket | null {
   if (!BACKEND_URL) return null;
   return io(BACKEND_URL, {
@@ -20,6 +37,29 @@ export async function simulateOnBackend(): Promise<boolean> {
   if (!BACKEND_URL) return false;
   try {
     const res = await fetch(`${BACKEND_URL}/api/simulate`, { method: 'POST' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sends the user's review of a flagged transaction to the engine. A 'safe'
+ * verdict lets that transaction start teaching the baseline; 'fraud'
+ * permanently excludes it, so reporting fraud can never widen what the
+ * detector considers normal.
+ *
+ * Returns false when there's no backend (local fallback mode) — the caller
+ * should still update its own UI in that case.
+ */
+export async function submitVerdict(id: string, verdict: 'safe' | 'fraud'): Promise<boolean> {
+  if (!BACKEND_URL) return false;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/transactions/${encodeURIComponent(id)}/verdict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verdict }),
+    });
     return res.ok;
   } catch {
     return false;

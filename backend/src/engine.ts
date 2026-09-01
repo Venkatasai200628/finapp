@@ -1,16 +1,19 @@
-import { behaviorBaseline } from './baseline';
+import { Baseline, computeBaseline, SEED_BASELINE } from './baseline';
 
 export type Severity = 'good' | 'warn' | 'danger';
 
-export type EngineTransaction = {
+export type RawTransaction = {
   id: string;
   merchant: string;
   category: string;
   amount: number;
   timestamp: number;
+  source: 'simulator' | 'account_aggregator' | 'sms';
+};
+
+export type EngineTransaction = RawTransaction & {
   severity: Severity;
   reasons: string[];
-  source: 'simulator' | 'account_aggregator' | 'sms';
 };
 
 function randomOf<T>(arr: T[]): T {
@@ -24,113 +27,97 @@ function gaussian(mean: number, stdDev: number) {
   return mean + z * stdDev;
 }
 
+function newId() {
+  return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
 /**
- * Generates one simulated transaction event, pre-scored against the baseline
- * profile. This is the stand-in for a real event source (Account Aggregator
- * poll or SMS listener) — see scoreTransaction() below for the part that
- * stays the same once real data replaces this generator.
+ * Stand-in for a real event source (Account Aggregator poll or SMS listener).
+ *
+ * Deliberately generates from SEED_BASELINE, never the learned one: this
+ * represents what happens out in the world, which does not change just
+ * because our model's beliefs changed. It also emits NO severity — deciding
+ * what's suspicious is scoreTransaction()'s job alone, so the learned
+ * baseline is genuinely what drives every flag.
  */
-export function generateTransactionEvent(): EngineTransaction {
-  const isAnomalous = Math.random() < 0.28;
-  const hour = new Date().getHours();
+export function generateRawTransaction(): RawTransaction {
+  const base = { id: newId(), timestamp: Date.now(), source: 'simulator' as const };
 
-  if (isAnomalous) {
-    const anomalyType = randomOf(['huge_amount', 'odd_hour', 'unknown_merchant']);
-    let amount = -Math.round(3500 + Math.random() * 20000);
-    let merchant = 'Unknown Merchant';
-    let category = 'Uncategorized';
-    const reasons: string[] = [];
-
-    if (anomalyType === 'huge_amount') {
-      const cat = randomOf(behaviorBaseline.categories);
-      merchant = randomOf(cat.merchants);
-      category = cat.category;
-      reasons.push(`${Math.abs(Math.round(amount / cat.avgAmount))}x your usual ${cat.category.toLowerCase()} spend`);
-    } else if (anomalyType === 'odd_hour') {
-      amount = -Math.round(800 + Math.random() * 4000);
-      const cat = randomOf(behaviorBaseline.categories);
-      merchant = randomOf(cat.merchants);
-      category = cat.category;
-      reasons.push('Occurred outside your usual active hours');
-    } else {
-      reasons.push('Unfamiliar merchant with no transaction history');
-    }
-
-    if (hour < behaviorBaseline.normalHourStart || hour > behaviorBaseline.normalHourEnd) {
-      if (!reasons.some((r) => r.includes('hours'))) reasons.push('Outside typical transaction hours');
-    }
-
-    return {
-      id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      merchant,
-      category,
-      amount,
-      timestamp: Date.now(),
-      severity: 'danger',
-      reasons,
-      source: 'simulator',
-    };
+  if (Math.random() < 0.06) {
+    return { ...base, merchant: 'Salary / Credit', category: 'Income', amount: Math.round(4000 + Math.random() * 3000) };
   }
 
-  const cat = randomOf(behaviorBaseline.categories);
-  const merchant = randomOf(cat.merchants);
-  const amount = -Math.max(50, Math.round(gaussian(cat.avgAmount, cat.stdDev)));
-  const isIncome = Math.random() < 0.06;
+  if (Math.random() < 0.25) {
+    const kind = randomOf(['huge_amount', 'unknown_merchant', 'odd_hour']);
+    if (kind === 'unknown_merchant') {
+      return { ...base, merchant: 'Unknown Merchant', category: 'Uncategorized', amount: -Math.round(gaussian(9000, 4000)) };
+    }
+    const cat = randomOf(SEED_BASELINE.categories);
+    const amount =
+      kind === 'huge_amount'
+        ? -Math.round(4000 + Math.random() * 20000)
+        : -Math.round(800 + Math.random() * 4000);
+    // An "odd hour" event backdates itself into the small hours so the
+    // time-of-day rule has something real to catch.
+    const timestamp = kind === 'odd_hour' ? new Date().setHours(3, Math.floor(Math.random() * 60), 0, 0) : base.timestamp;
+    return { ...base, timestamp, merchant: randomOf(cat.merchants), category: cat.category, amount };
+  }
 
+  const cat = randomOf(SEED_BASELINE.categories);
   return {
-    id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    merchant: isIncome ? 'Salary / Credit' : merchant,
-    category: isIncome ? 'Income' : cat.category,
-    amount: isIncome ? Math.round(4000 + Math.random() * 3000) : amount,
-    timestamp: Date.now(),
-    severity: 'good',
-    reasons: [],
-    source: 'simulator',
+    ...base,
+    merchant: randomOf(cat.merchants),
+    category: cat.category,
+    amount: -Math.max(50, Math.round(gaussian(cat.avgAmount, cat.stdDev))),
   };
 }
 
 /**
- * Scores an already-real transaction (from Account Aggregator or SMS
- * parsing) against the baseline profile. This is the function real
- * ingestion paths should call instead of generateTransactionEvent().
+ * Scores a transaction against the user's learned behavior profile.
+ *
+ * This is deviation detection, not fraud detection: it answers "is this
+ * unlike what this person normally does", which is a reason to look, not
+ * evidence of a threat.
  */
-export function scoreTransaction(input: {
-  id: string;
-  merchant: string;
-  category: string;
-  amount: number;
-  timestamp: number;
-  source: EngineTransaction['source'];
-}): EngineTransaction {
+export function scoreTransaction(input: RawTransaction, baseline: Baseline = computeBaseline()): EngineTransaction {
+  // Income isn't spending — scoring it against spending norms only ever
+  // produces noise (a salary credit is not a suspicious grocery run).
+  if (input.amount >= 0) {
+    return { ...input, severity: 'good', reasons: [] };
+  }
+
   const hour = new Date(input.timestamp).getHours();
-  const cat = behaviorBaseline.categories.find((c) => c.category === input.category);
+  const magnitude = Math.abs(input.amount);
+  const cat = baseline.categories.find((c) => c.category === input.category);
   const reasons: string[] = [];
   let risk = 0;
 
-  if (Math.abs(input.amount) > behaviorBaseline.maxNormalAmount) {
+  if (magnitude > baseline.maxNormalAmount) {
     risk += 2;
-    reasons.push('Amount is well above your typical transaction size');
+    reasons.push(`₹${magnitude.toLocaleString('en-IN')} is above your usual ceiling of ₹${Math.round(baseline.maxNormalAmount).toLocaleString('en-IN')}`);
   }
+
   if (cat) {
-    const z = (Math.abs(input.amount) - cat.avgAmount) / cat.stdDev;
+    const z = cat.stdDev > 0 ? (magnitude - cat.avgAmount) / cat.stdDev : 0;
     if (z > 3) {
       risk += 2;
-      reasons.push(`${Math.round(z)}x standard deviations above your usual ${cat.category.toLowerCase()} spend`);
+      const multiple = cat.avgAmount > 0 ? (magnitude / cat.avgAmount).toFixed(1) : '?';
+      reasons.push(`${multiple}x your average ${cat.category.toLowerCase()} spend of ₹${cat.avgAmount.toLocaleString('en-IN')}`);
     }
     if (!cat.merchants.includes(input.merchant)) {
       risk += 1;
-      reasons.push('Merchant not seen in your history for this category');
+      reasons.push(`First time you've paid ${input.merchant} in ${cat.category.toLowerCase()}`);
     }
   } else {
     risk += 1;
-    reasons.push('Unrecognized category / merchant');
+    reasons.push('Merchant and category are both unfamiliar');
   }
-  if (hour < behaviorBaseline.normalHourStart || hour > behaviorBaseline.normalHourEnd) {
+
+  if (hour < baseline.normalHourStart || hour > baseline.normalHourEnd) {
     risk += 1;
-    reasons.push('Outside typical transaction hours');
+    reasons.push(`${hour}:00 is outside your usual ${baseline.normalHourStart}:00–${baseline.normalHourEnd}:00 activity`);
   }
 
   const severity: Severity = risk >= 3 ? 'danger' : risk >= 1 ? 'warn' : 'good';
-
   return { ...input, severity, reasons };
 }

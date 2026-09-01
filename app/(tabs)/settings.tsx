@@ -96,6 +96,7 @@ export default function SettingsScreen() {
     liveAlerts,
     triggerSimulatedTransaction,
     dataSource,
+    baseline,
   } = useSettings();
   const { isDesktop } = useResponsive();
 
@@ -199,11 +200,54 @@ export default function SettingsScreen() {
 
         <Animated.View entering={FadeInDown.delay(260).duration(450)}>
           <Card style={styles.card}>
-            <Text style={styles.groupLabel}>About this engine</Text>
+            <Text style={styles.groupLabel}>What the engine has learned</Text>
+            {!baseline ? (
+              <Text style={styles.aboutBody}>Connect the engine to see the profile it builds from your history.</Text>
+            ) : !baseline.isLearned ? (
+              <Text style={styles.aboutBody}>
+                Still using starter defaults — {baseline.learnedFrom} of 12 transactions needed before it starts
+                learning your own patterns.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.aboutBody}>
+                  Built from your last {baseline.learnedFrom} transactions. Anything far outside these gets flagged.
+                </Text>
+                <View style={styles.learnedGrid}>
+                  {baseline.categories
+                    .filter((c) => c.sampleSize > 0)
+                    .map((c) => (
+                      <View key={c.category} style={styles.learnedRow}>
+                        <Text style={styles.learnedCategory}>{c.category}</Text>
+                        <Text style={styles.learnedValue}>
+                          ₹{c.avgAmount.toLocaleString('en-IN')} avg
+                          <Text style={styles.learnedMeta}> · {c.sampleSize} seen</Text>
+                        </Text>
+                      </View>
+                    ))}
+                  <View style={styles.learnedRow}>
+                    <Text style={styles.learnedCategory}>Usual hours</Text>
+                    <Text style={styles.learnedValue}>
+                      {baseline.normalHourStart}:00 – {baseline.normalHourEnd}:00
+                    </Text>
+                  </View>
+                  <View style={styles.learnedRow}>
+                    <Text style={styles.learnedCategory}>Normal ceiling</Text>
+                    <Text style={styles.learnedValue}>₹{Math.round(baseline.maxNormalAmount).toLocaleString('en-IN')}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(320).duration(450)}>
+          <Card style={styles.card}>
+            <Text style={styles.groupLabel}>How detection works</Text>
             <Text style={styles.aboutBody}>
-              Each simulated transaction is scored against your baseline profile — average amount per category,
-              usual active hours, and known merchants. A significant deviation raises a real-time alert here and
-              on the Home tab.
+              Each transaction is scored against the profile above — amount vs. your category average, whether
+              the merchant is familiar, and time of day. This is deviation detection, not fraud detection: a flag
+              means it doesn&apos;t match your pattern, which is a reason to look rather than proof of a threat.
             </Text>
           </Card>
         </Animated.View>
@@ -374,5 +418,31 @@ const styles = StyleSheet.create({
   aboutBody: {
     ...typography.body,
     lineHeight: 19,
+  },
+  learnedGrid: {
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  learnedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  learnedCategory: {
+    fontSize: 12.5,
+    color: colors.textSecondary,
+  },
+  learnedValue: {
+    fontSize: 12.5,
+    fontFamily: fontFamily.semiBold,
+    color: colors.textPrimary,
+  },
+  learnedMeta: {
+    fontFamily: fontFamily.regular,
+    color: colors.textMuted,
   },
 });

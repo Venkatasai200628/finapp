@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { generateTransactionEvent, LiveTransaction } from '../lib/realtimeEngine';
-import { BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
+import { Baseline, BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
 
 type SettingsState = {
   realtimeDetectionEnabled: boolean;
@@ -15,6 +15,8 @@ type SettingsState = {
   /** 'live' = events are streaming from the real backend over WebSocket.
    *  'local' = no backend configured/reachable, running the on-device fallback simulation. */
   dataSource: 'live' | 'local' | 'connecting';
+  /** What the engine has learned "normal" looks like. Null in local fallback mode. */
+  baseline: Baseline | null;
 };
 
 const SettingsContext = createContext<SettingsState | undefined>(undefined);
@@ -31,6 +33,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [liveFeed, setLiveFeed] = useState<LiveTransaction[]>([]);
   const [lastScanAt, setLastScanAt] = useState<number | null>(null);
   const [dataSource, setDataSource] = useState<'live' | 'local' | 'connecting'>(BACKEND_URL ? 'connecting' : 'local');
+  const [baseline, setBaseline] = useState<Baseline | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -55,6 +58,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLiveFeed((prev) => (prev.length ? prev : rows.slice(0, 25)));
     });
     socket.on('transaction', (event: LiveTransaction) => pushEvent(event));
+    socket.on('baseline', (next: Baseline) => setBaseline(next));
 
     return () => {
       socket.disconnect();
@@ -107,6 +111,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         triggerSimulatedTransaction,
         lastScanAt,
         dataSource,
+        baseline,
       }}
     >
       {children}
