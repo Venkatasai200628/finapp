@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import GradientCard from '../../components/GradientCard';
-import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
+import ScreenGlow from '../../components/ScreenGlow';
+import { colors, fontFamily, gradients, radius, spacing, typography } from '../../constants/theme';
 import { SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
 export default function TradingScreen() {
@@ -25,6 +26,7 @@ export default function TradingScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
+      <ScreenGlow />
       <View style={styles.content}>
         <Animated.View style={floatStyle}>
           <GradientCard colors={gradients.trading} floating style={styles.iconCard}>
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 11.5,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textSecondary,
   },
 });

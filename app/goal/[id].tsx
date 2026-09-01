@@ -7,8 +7,9 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import AnimatedNumber from '../../components/AnimatedNumber';
+import ScreenGlow from '../../components/ScreenGlow';
 import { useGoals } from '../../context/GoalsContext';
-import { colors, radius, spacing, typography } from '../../constants/theme';
+import { fontFamily, colors, radius, spacing, typography } from '../../constants/theme';
 
 const QUICK_AMOUNTS = [500, 1000, 5000];
 
@@ -21,6 +22,7 @@ export default function GoalDetailScreen() {
   if (!goal) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenGlow />
         <DetailHeader title="Goal" />
         <View style={styles.notFound}>
           <Text style={styles.notFoundText}>This goal is no longer available.</Text>
@@ -41,6 +43,7 @@ export default function GoalDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScreenGlow />
       <DetailHeader title={goal.name} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroWrap}>
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 32,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
@@ -157,7 +160,7 @@ const styles = StyleSheet.create({
   },
   pctText: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   remainingText: {
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
   },
   quickChipText: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   inputRow: {
@@ -211,8 +214,8 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     fontSize: 13.5,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontFamily: fontFamily.extraBold,
+    color: colors.ringCore,
   },
   contribRow: {
     flexDirection: 'row',
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
   },
   contribAmount: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.good,
   },
   notFound: {

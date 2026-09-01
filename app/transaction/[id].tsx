@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
-import { colors, radius, spacing, typography } from '../../constants/theme';
+import ScreenGlow from '../../components/ScreenGlow';
+import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 
 const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   Food: 'fast-food',
@@ -39,6 +40,7 @@ export default function TransactionDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScreenGlow />
       <DetailHeader title="Transaction" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroWrap}>
@@ -153,7 +155,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 34,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
@@ -162,7 +164,7 @@ const styles = StyleSheet.create({
   },
   merchant: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
     marginTop: spacing.sm,
   },
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   },
   flagTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   flagReason: {
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
   },
   safeBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.bg,
   },
   reportBtn: {
@@ -222,7 +224,7 @@ const styles = StyleSheet.create({
   },
   reportBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.danger,
   },
   resolvedCard: {
@@ -249,7 +251,7 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textPrimary,
   },
 });

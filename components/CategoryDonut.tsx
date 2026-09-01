@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { colors, spacing } from '../constants/theme';
+import { fontFamily, colors, spacing } from '../constants/theme';
 import { CategorySpend } from '../data/mockData';
 
 export default function CategoryDonut({ data, size = 140 }: { data: CategorySpend[]; size?: number }) {
@@ -77,11 +77,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
   legendAmount: {
     fontSize: 12,
     color: colors.textPrimary,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
 });

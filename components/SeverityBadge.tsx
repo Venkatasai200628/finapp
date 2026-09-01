@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, statusColor } from '../constants/theme';
+import { fontFamily, colors, radius, spacing, statusColor } from '../constants/theme';
 import { Severity } from '../data/mockData';
 
 const LABEL: Record<Severity, string> = {
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },

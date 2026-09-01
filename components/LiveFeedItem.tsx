@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { LiveTransaction } from '../lib/realtimeEngine';
 
 function timeAgo(ts: number) {
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   merchant: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textPrimary,
   },
   reasonRow: {
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textSecondary,
   },
   amountDanger: {

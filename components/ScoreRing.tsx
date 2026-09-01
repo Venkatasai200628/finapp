@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
-import { colors } from '../constants/theme';
+import { fontFamily, colors } from '../constants/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -69,12 +69,12 @@ const styles = StyleSheet.create({
   },
   number: {
     fontSize: 40,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   of: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textMuted,
     marginTop: -2,
   },

@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 
 export default function LiveIndicator({ active }: { active: boolean }) {
   const pulse = useSharedValue(0);
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     letterSpacing: 1,
   },
 });

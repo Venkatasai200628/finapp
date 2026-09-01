@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { HealthFactor } from '../data/mockData';
 
 function barColor(score: number) {
@@ -34,12 +34,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
   score: {
     fontSize: 13,
     color: colors.textPrimary,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
   track: {
     height: 6,

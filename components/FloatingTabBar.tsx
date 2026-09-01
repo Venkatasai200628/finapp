@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, shadow, spacing } from '../constants/theme';
+import { colors, fontFamily, radius, shadow, spacing } from '../constants/theme';
 import { SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -34,6 +35,7 @@ type Props = {
 };
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.6, overshootClamping: true };
+const ON_ACCENT = colors.ringCore; // dark text/icon reads correctly against the light cyan accent
 
 export default function FloatingTabBar({ state, navigation }: Props) {
   const { isDesktop } = useResponsive();
@@ -65,10 +67,14 @@ function Sidebar({ state, navigation }: Props) {
   }));
 
   return (
+    // Solid, not blurred: this rail sits in the screen's own left margin, so
+    // there's nothing behind it for a blur to pick up — it would just show
+    // whatever's under the page (see FloatingPillBar below for the version
+    // that actually overlaps scrolling content and benefits from real blur).
     <View style={[sidebarStyles.wrap, { paddingTop: insets.top + spacing.xl }]}>
       <View style={sidebarStyles.brandRow}>
         <View style={sidebarStyles.brandMark}>
-          <Ionicons name="pulse" size={16} color={colors.bg} />
+          <Ionicons name="pulse" size={16} color={ON_ACCENT} />
         </View>
         <Text style={sidebarStyles.brandText}>Fin</Text>
       </View>
@@ -83,11 +89,7 @@ function Sidebar({ state, navigation }: Props) {
               onPress={() => press(navigation, route, focused)}
               style={[sidebarStyles.item, { height: itemHeight }]}
             >
-              <Ionicons
-                name={ICONS[route.name] ?? 'ellipse'}
-                size={18}
-                color={focused ? '#FFFFFF' : colors.textMuted}
-              />
+              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={18} color={focused ? ON_ACCENT : colors.textMuted} />
               <Text style={[sidebarStyles.itemLabel, focused && sidebarStyles.itemLabelActive]}>
                 {LABELS[route.name] ?? route.name}
               </Text>
@@ -120,6 +122,10 @@ function FloatingPillBar({ state, navigation }: Props) {
   return (
     <View style={[pillStyles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} pointerEvents="box-none">
       <View style={[pillStyles.bar, { width: barWidth }, shadow.floating]}>
+        <BlurView intensity={50} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
+        <View style={[StyleSheet.absoluteFill, { borderRadius: radius.xl, overflow: 'hidden' }]}>
+          <View style={pillStyles.tint} />
+        </View>
         <Animated.View style={[pillStyles.indicator, { width: tabWidth - 8 }, indicatorStyle]} />
         {state.routes.map((route, index) => {
           const focused = state.index === index;
@@ -129,7 +135,7 @@ function FloatingPillBar({ state, navigation }: Props) {
               onPress={() => press(navigation, route, focused)}
               style={[pillStyles.tab, { width: tabWidth }]}
             >
-              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={19} color={focused ? colors.bg : colors.textMuted} />
+              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={19} color={focused ? ON_ACCENT : colors.textMuted} />
               {focused && <Text style={pillStyles.label}>{LABELS[route.name] ?? route.name}</Text>}
             </Pressable>
           );
@@ -146,11 +152,12 @@ const sidebarStyles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SIDEBAR_WIDTH,
-    backgroundColor: colors.surfaceHi,
+    backgroundColor: colors.panelSolid,
     borderRightWidth: 1,
     borderRightColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
+    overflow: 'hidden',
   },
   brandRow: {
     flexDirection: 'row',
@@ -169,7 +176,7 @@ const sidebarStyles = StyleSheet.create({
   },
   brandText: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   navList: {
@@ -191,12 +198,12 @@ const sidebarStyles = StyleSheet.create({
   },
   itemLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textMuted,
   },
   itemLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: ON_ACCENT,
+    fontFamily: fontFamily.bold,
   },
   footer: {
     marginTop: 'auto',
@@ -219,12 +226,16 @@ const pillStyles = StyleSheet.create({
   },
   bar: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceHi,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 4,
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  tint: {
+    flex: 1,
+    backgroundColor: colors.surfaceHi,
   },
   indicator: {
     position: 'absolute',
@@ -243,7 +254,7 @@ const pillStyles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.bg,
+    fontFamily: fontFamily.bold,
+    color: ON_ACCENT,
   },
 });

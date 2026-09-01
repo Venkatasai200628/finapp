@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { SlideInUp, SlideOutUp } from 'react-native-reanimated';
-import { colors, radius, shadow, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, shadow, spacing } from '../constants/theme';
 import { useSettings } from '../context/SettingsContext';
 
 export default function LiveAlertToast() {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   detail: {
