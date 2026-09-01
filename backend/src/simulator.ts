@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { computeBaseline } from './baseline';
-import { generateRawTransaction, scoreTransaction } from './engine';
+import { generateRawTransaction, RawTransaction, scoreTransaction } from './engine';
 import { insertTransaction } from './db';
 
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -12,7 +12,16 @@ let timer: ReturnType<typeof setTimeout> | null = null;
  * same path as the automatic ticker.
  */
 export function emitTransaction(io: Server) {
-  const event = scoreTransaction(generateRawTransaction(), computeBaseline());
+  return ingestTransaction(io, generateRawTransaction());
+}
+
+/**
+ * Scores, stores and broadcasts one transaction, whatever produced it.
+ * A parsed bank SMS from a phone and a simulated event go through this
+ * exact same path — the detection never knows or cares which it was.
+ */
+export function ingestTransaction(io: Server, raw: RawTransaction) {
+  const event = scoreTransaction(raw, computeBaseline());
   insertTransaction({ ...event, reasons: JSON.stringify(event.reasons) });
   io.emit('transaction', event);
   io.emit('baseline', computeBaseline());

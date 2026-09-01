@@ -58,10 +58,41 @@ same network.
 
 **Important**: Account Aggregator is *pull-based* — your backend asks for
 data, it isn't pushed to you the instant a transaction happens. For truly
-instant alerts you'll eventually want an on-device SMS/notification listener
-(Android only) feeding `scoreTransaction()` directly from the phone — that's
-a separate, later phase requiring a custom native build (not available in
-Expo Go).
+instant alerts, use the SMS path below instead (Android only).
+
+## Real transactions via bank SMS (Android)
+
+This is the only route that is genuinely real-time and captures every UPI
+app at once. You never integrate with PhonePe/GPay/Navi — they all debit a
+bank account, and the *bank* sends the SMS, so parsing bank SMS covers all
+of them including apps installed later.
+
+Pipeline: `lib/smsParser.ts` (on-device) → `POST /api/ingest` →
+`scoreTransaction()` → socket broadcast. The raw SMS body never leaves the
+phone; only `{merchant, category, amount}` is sent.
+
+- **Parser**: `lib/smsParser.ts`, covering HDFC / SBI / ICICI / Axis formats
+  plus card swipes, with explicit rejection of OTPs, due-date reminders,
+  failed transactions and collect requests. Tests: `npx tsx lib/smsParser.test.ts`
+- **Test screen**: Settings → "Bank SMS detection" lets you paste any SMS
+  and watch it parse and score. This works in Expo Go, so you can verify the
+  whole pipeline before dealing with native builds.
+- **Automatic capture** needs a development build (Expo Go cannot grant SMS
+  permissions):
+  ```bash
+  npx expo install @maniac-tech/react-native-expo-read-sms
+  npx eas build --profile development --platform android
+  ```
+  `lib/smsListener.ts` loads that package defensively, so the app runs fine
+  before you install it.
+
+**iOS cannot do this.** Apple exposes no API for reading SMS, so instant
+detection is impossible there — iOS users need Account Aggregator or manual
+entry. Plan for that rather than being surprised by it.
+
+**Google Play** treats `READ_SMS` as a restricted permission. Sideloading a
+dev build to your own device is unrestricted; publishing requires a
+declaration and review.
 
 ## Storage
 

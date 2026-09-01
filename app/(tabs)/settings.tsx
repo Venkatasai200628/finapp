@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
 import Card from '../../components/Card';
@@ -171,6 +172,22 @@ export default function SettingsScreen() {
                 <Pressable style={styles.simulateBtn} onPress={triggerSimulatedTransaction}>
                   <Ionicons name="play" size={13} color={colors.ringCore} />
                   <Text style={styles.simulateBtnText}>Run</Text>
+                </Pressable>
+              }
+            />
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(170).duration(450)}>
+          <Card style={styles.card}>
+            <SettingsRow
+              icon="chatbox-ellipses"
+              iconColor={colors.income}
+              title="Bank SMS detection"
+              subtitle="Read real transactions from bank messages"
+              right={
+                <Pressable style={styles.simulateBtn} onPress={() => router.push('/sms-test')}>
+                  <Text style={styles.simulateBtnText}>Open</Text>
                 </Pressable>
               }
             />
