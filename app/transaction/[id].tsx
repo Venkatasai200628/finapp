@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import ScreenGlow from '../../components/ScreenGlow';
+import { submitVerdict } from '../../lib/backendClient';
 import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 
 const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -37,6 +38,12 @@ export default function TransactionDetailScreen() {
   const icon = CATEGORY_ICON[params.category ?? ''] ?? 'help-circle';
 
   const [resolution, setResolution] = useState<'none' | 'safe' | 'reported'>('none');
+  const [syncedToEngine, setSyncedToEngine] = useState(false);
+
+  const review = async (verdict: 'safe' | 'fraud') => {
+    setResolution(verdict === 'safe' ? 'safe' : 'reported');
+    setSyncedToEngine(await submitVerdict(params.id, verdict));
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -71,11 +78,11 @@ export default function TransactionDetailScreen() {
                 <Text style={styles.flagReason}>• Deviates significantly from your normal spending behavior</Text>
               )}
               <View style={styles.actionRow}>
-                <Pressable style={[styles.actionBtn, styles.safeBtn]} onPress={() => setResolution('safe')}>
+                <Pressable style={[styles.actionBtn, styles.safeBtn]} onPress={() => review('safe')}>
                   <Ionicons name="checkmark" size={15} color={colors.bg} />
                   <Text style={styles.safeBtnText}>Mark as safe</Text>
                 </Pressable>
-                <Pressable style={[styles.actionBtn, styles.reportBtn]} onPress={() => setResolution('reported')}>
+                <Pressable style={[styles.actionBtn, styles.reportBtn]} onPress={() => review('fraud')}>
                   <Ionicons name="flag" size={14} color={colors.danger} />
                   <Text style={styles.reportBtnText}>Report</Text>
                 </Pressable>
@@ -94,8 +101,12 @@ export default function TransactionDetailScreen() {
               />
               <Text style={styles.resolvedText}>
                 {resolution === 'safe'
-                  ? "Thanks — we'll remember this pattern is normal for you."
-                  : 'Reported. Our team (in a real system) would review this transaction.'}
+                  ? syncedToEngine
+                    ? `${params.merchant} now counts toward your normal ${(params.category ?? '').toLowerCase()} range.`
+                    : 'Marked safe on this device. Connect the engine to have it learn from this.'
+                  : syncedToEngine
+                    ? "Reported. This is excluded from your baseline, so it won't make future fraud look normal."
+                    : 'Reported on this device. Connect the engine to have it excluded from your baseline.'}
               </Text>
             </Card>
           </Animated.View>
