@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useEffect, useState } from 'react';
 import Card from '../../components/Card';
+import ScreenGlow from '../../components/ScreenGlow';
 import LiveIndicator from '../../components/LiveIndicator';
-import { colors, radius, shadow, spacing, typography } from '../../constants/theme';
+import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 import { useSettings } from '../../context/SettingsContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
@@ -100,6 +101,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
+      <ScreenGlow />
       <ScrollView
         contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
@@ -108,7 +110,7 @@ export default function SettingsScreen() {
         <Text style={styles.subtitle}>Control detection, alerts, and simulation behavior.</Text>
 
         <Animated.View entering={FadeInDown.duration(450)}>
-          <Card style={[styles.card, styles.heroCard, shadow.card]}>
+          <Card elevated style={styles.card}>
             <View style={styles.heroTop}>
               <Text style={styles.heroTitle}>Real-time detection</Text>
               <Switch
@@ -166,7 +168,7 @@ export default function SettingsScreen() {
               subtitle="Manually trigger the detection engine for a demo"
               right={
                 <Pressable style={styles.simulateBtn} onPress={triggerSimulatedTransaction}>
-                  <Ionicons name="play" size={13} color={colors.bg} />
+                  <Ionicons name="play" size={13} color={colors.ringCore} />
                   <Text style={styles.simulateBtnText}>Run</Text>
                 </Pressable>
               }
@@ -234,9 +236,6 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.lg,
   },
-  heroCard: {
-    backgroundColor: colors.surfaceHi,
-  },
   heroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -244,7 +243,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   heroBody: {
@@ -265,7 +264,7 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textMuted,
   },
   heroStatsRow: {
@@ -282,13 +281,13 @@ const styles = StyleSheet.create({
   },
   heroStatNumber: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   heroStatLabel: {
     fontSize: 10.5,
     color: colors.textMuted,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   segmentWrap: {
     flexDirection: 'row',
@@ -312,11 +311,11 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textMuted,
   },
   segmentLabelActive: {
-    color: '#FFFFFF',
+    color: colors.ringCore,
   },
   sensitivityNote: {
     fontSize: 12,
@@ -337,7 +336,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   rowSubtitle: {
@@ -356,12 +355,12 @@ const styles = StyleSheet.create({
   },
   simulateBtnText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: colors.bg,
+    fontFamily: fontFamily.extraBold,
+    color: colors.ringCore,
   },
   groupLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,

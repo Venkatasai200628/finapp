@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { Transaction } from '../data/mockData';
 
 const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   merchant: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textPrimary,
   },
   meta: {
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
   income: {
     color: colors.good,

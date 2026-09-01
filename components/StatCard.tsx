@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import AnimatedNumber from './AnimatedNumber';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 
 type Props = {
   label: string;
@@ -52,14 +52,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   amount: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
   trendRow: {
@@ -69,6 +69,6 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
 });

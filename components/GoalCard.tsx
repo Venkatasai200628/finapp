@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { Goal } from '../data/mockData';
 
 export default function GoalCard({ goal, delay = 0, onPress }: { goal: Goal; delay?: number; onPress?: () => void }) {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   target: {
@@ -78,12 +78,12 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textSecondary,
   },
   pct: {
     fontSize: 11.5,
-    fontWeight: '800',
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
   },
 });

@@ -5,8 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Card from '../components/Card';
 import TransactionRow from '../components/TransactionRow';
+import ScreenGlow from '../components/ScreenGlow';
 import { allTransactions, Transaction } from '../data/mockData';
-import { colors, radius, spacing, typography } from '../constants/theme';
+import { fontFamily, colors, radius, spacing, typography } from '../constants/theme';
 
 function txParams(tx: Transaction) {
   return {
@@ -35,6 +36,7 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScreenGlow />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -139,11 +141,11 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: '#FFFFFF',
+    color: colors.ringCore,
   },
   content: {
     padding: spacing.lg,

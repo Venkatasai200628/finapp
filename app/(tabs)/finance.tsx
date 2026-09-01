@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from '../../components/Card';
-import GradientCard from '../../components/GradientCard';
+import ScreenGlow from '../../components/ScreenGlow';
 import ForecastChart from '../../components/ForecastChart';
 import CategoryDonut from '../../components/CategoryDonut';
 import TransactionRow from '../../components/TransactionRow';
@@ -13,7 +13,7 @@ import StatCard from '../../components/StatCard';
 import BudgetRow from '../../components/BudgetRow';
 import GoalCard from '../../components/GoalCard';
 import { budgets, cashFlowForecast, categorySpend, monthlySummary, stressTrend, transactions } from '../../data/mockData';
-import { colors, gradients, spacing, typography } from '../../constants/theme';
+import { colors, fontFamily, spacing, typography } from '../../constants/theme';
 import { useGoals } from '../../context/GoalsContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
@@ -38,6 +38,7 @@ export default function FinanceScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
+      <ScreenGlow />
       <ScrollView
         contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
@@ -52,11 +53,11 @@ export default function FinanceScreen() {
         </View>
 
         <Animated.View entering={FadeInDown.delay(160).duration(500)}>
-          <GradientCard colors={gradients.savings} style={styles.rateCard}>
-            <Text style={styles.rateLabel}>Savings Rate</Text>
+          <Card elevated style={styles.rateCard}>
+            <Text style={styles.rateLabel}>Savings rate</Text>
             <Text style={styles.rateValue}>{monthlySummary.savingsRate}%</Text>
             <Text style={styles.rateNote}>of income saved this month — aim to keep this above 20%.</Text>
-          </GradientCard>
+          </Card>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(180).duration(500)}>
@@ -179,20 +180,18 @@ const styles = StyleSheet.create({
   },
   rateLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#241A05',
-    opacity: 0.75,
+    fontFamily: fontFamily.semiBold,
+    color: colors.textSecondary,
   },
   rateValue: {
     fontSize: 36,
-    fontWeight: '800',
-    color: '#241A05',
+    fontFamily: fontFamily.extraBold,
+    color: colors.accent,
     marginTop: 2,
   },
   rateNote: {
     fontSize: 12,
-    color: '#241A05',
-    opacity: 0.75,
+    color: colors.textMuted,
     marginTop: 6,
   },
   card: {
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
   },
   forecastValue: {
     color: colors.textPrimary,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
   legendRow: {
     flexDirection: 'row',
@@ -261,7 +260,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.accent,
   },
   txCard: {

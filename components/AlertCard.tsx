@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from './Card';
 import SeverityBadge from './SeverityBadge';
-import { colors, spacing } from '../constants/theme';
+import { fontFamily, colors, spacing } from '../constants/theme';
 import { Alert } from '../data/mockData';
 
 export default function AlertCard({ alert, delay = 0, onPress }: { alert: Alert; delay?: number; onPress?: () => void }) {
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
     marginBottom: 4,
   },
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.accent,
   },
 });

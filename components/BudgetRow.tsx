@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors, radius, spacing } from '../constants/theme';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { Budget } from '../data/mockData';
 
 export default function BudgetRow({ budget, delay = 0 }: { budget: Budget; delay?: number }) {
@@ -37,19 +37,19 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     color: colors.textSecondary,
   },
   amounts: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   over: {
     color: colors.danger,
   },
   of: {
-    fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: colors.textMuted,
   },
   track: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   overNote: {
     fontSize: 10.5,
     color: colors.danger,
-    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
     marginTop: 4,
   },
 });

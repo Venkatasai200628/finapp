@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Card from '../../components/Card';
-import GradientCard from '../../components/GradientCard';
+import ScreenGlow from '../../components/ScreenGlow';
 import ScoreRing from '../../components/ScoreRing';
 import FactorBar from '../../components/FactorBar';
 import AlertCard from '../../components/AlertCard';
@@ -13,7 +13,7 @@ import LiveIndicator from '../../components/LiveIndicator';
 import LiveFeedItem from '../../components/LiveFeedItem';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import { alerts, healthFactors, healthScore, monthlySummary } from '../../data/mockData';
-import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
+import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 import { useSettings } from '../../context/SettingsContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
@@ -25,6 +25,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
+      <ScreenGlow />
       <ScrollView
         contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
@@ -40,19 +41,19 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(60).duration(500)}>
-          <GradientCard colors={gradients.hero} floating style={{ marginBottom: spacing.lg }}>
+          <Card elevated style={styles.heroCard}>
             <View style={styles.heroTop}>
-              <Text style={styles.heroLabel}>Total Balance</Text>
+              <Text style={styles.heroLabel}>Total balance</Text>
               <LiveIndicator active={realtimeDetectionEnabled} />
             </View>
             <AnimatedNumber value={totalBalance} prefix="₹" style={styles.heroAmount} />
             <View style={styles.heroFooter}>
-              <Ionicons name="shield-checkmark" size={13} color="#EAF0FF" />
+              <Ionicons name="shield-checkmark" size={13} color={colors.textSecondary} />
               <Text style={styles.heroFooterText}>
                 {realtimeDetectionEnabled ? 'Actively scanning every transaction' : 'Real-time scanning is paused'}
               </Text>
             </View>
-          </GradientCard>
+          </Card>
         </Animated.View>
 
         <View style={styles.statsRow}>
@@ -69,7 +70,7 @@ export default function HomeScreen() {
                   <Ionicons name="pulse" size={16} color={realtimeDetectionEnabled ? colors.live : colors.textMuted} />
                 </View>
                 <View>
-                  <Text style={typography.h3}>Real-Time Detection</Text>
+                  <Text style={typography.h3}>Real-time detection</Text>
                   <Text style={styles.liveSub}>
                     {realtimeDetectionEnabled ? 'Scanning transactions against your baseline' : 'Turn on in Settings to resume scanning'}
                   </Text>
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
@@ -171,6 +172,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  heroCard: {
+    marginBottom: spacing.lg,
+  },
   heroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -179,14 +183,13 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#EAF0FF',
-    opacity: 0.85,
+    fontFamily: fontFamily.semiBold,
+    color: colors.textSecondary,
   },
   heroAmount: {
     fontSize: 40,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontFamily: fontFamily.extraBold,
+    color: colors.textPrimary,
     letterSpacing: -1,
     marginBottom: spacing.md,
   },
@@ -197,9 +200,8 @@ const styles = StyleSheet.create({
   },
   heroFooterText: {
     fontSize: 12,
-    color: '#EAF0FF',
-    opacity: 0.9,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    fontFamily: fontFamily.medium,
   },
   statsRow: {
     flexDirection: 'row',
