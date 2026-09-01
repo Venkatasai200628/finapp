@@ -89,8 +89,8 @@ function percentile(values: number[], p: number) {
  * Falls back to SEED_BASELINE wholesale below MIN_SAMPLES_OVERALL, and
  * per-category for any category that hasn't been seen enough times yet.
  */
-export function computeBaseline(): Baseline {
-  const learnable = listTransactions(LEARNING_WINDOW).filter(isLearnable);
+export function computeBaseline(userId: string): Baseline {
+  const learnable = listTransactions(userId, LEARNING_WINDOW).filter(isLearnable);
   // Spending baselines are about spending — income would badly skew every stat.
   const expenses = learnable.filter((t) => t.amount < 0);
 

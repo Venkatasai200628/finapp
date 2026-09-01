@@ -3,3 +3,6 @@ dist/
 .env
 fin-data.json
 *.log
+fin.db
+fin.db-wal
+fin.db-shm

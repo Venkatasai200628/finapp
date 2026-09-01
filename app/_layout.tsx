@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, TextInput } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +12,7 @@ import {
   Lexend_700Bold,
   Lexend_800ExtraBold,
 } from '@expo-google-fonts/lexend';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
 import LiveAlertToast from '../components/LiveAlertToast';
@@ -36,6 +37,32 @@ function applyDefaultFont() {
   TI.defaultProps.style = [{ fontFamily: fontFamily.regular, color: colors.textPrimary }, TI.defaultProps.style];
 }
 
+/** Keeps the visible route in step with whether anyone is signed in. */
+function AuthGate() {
+  const { token, restoring } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (restoring) return;
+    const onSignIn = segments[0] === 'sign-in';
+
+    if (!token && !onSignIn) {
+      router.replace('/sign-in');
+    } else if (token && onSignIn) {
+      router.replace('/');
+    }
+  }, [token, restoring, segments, router]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Screen name="sign-in" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   const [fontsApplied, setFontsApplied] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
@@ -58,21 +85,15 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SettingsProvider>
-        <GoalsProvider>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
-          </Stack>
-          <LiveAlertToast />
-        </GoalsProvider>
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <GoalsProvider>
+            <StatusBar style="light" />
+            <AuthGate />
+            <LiveAlertToast />
+          </GoalsProvider>
+        </SettingsProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }

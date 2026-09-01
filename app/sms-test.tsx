@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import DetailHeader from '../components/DetailHeader';
 import ScreenGlow from '../components/ScreenGlow';
 import { parseTransactionSms } from '../lib/smsParser';
 import { handleIncomingSms, isSmsCaptureSupported, startSmsCapture, SmsStatus } from '../lib/smsListener';
+import { useAuth } from '../context/AuthContext';
 import { colors, fontFamily, radius, spacing, typography } from '../constants/theme';
 
 const SAMPLES = [
@@ -30,15 +31,21 @@ const SAMPLES = [
 ];
 
 export default function SmsTestScreen() {
+  const { token } = useAuth();
   const [body, setBody] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [captureStatus, setCaptureStatus] = useState<SmsStatus | null>(null);
+
+  // The native callback outlives this render, so it reads the token through
+  // a ref rather than closing over a value that goes stale on re-login.
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
 
   const parsed = body.trim() ? parseTransactionSms(body) : null;
 
   useEffect(() => {
     if (isSmsCaptureSupported()) {
-      startSmsCapture(setCaptureStatus);
+      startSmsCapture(() => tokenRef.current, setCaptureStatus);
     } else {
       setCaptureStatus({
         state: 'unavailable',
@@ -49,7 +56,7 @@ export default function SmsTestScreen() {
 
   const send = async () => {
     setResult('Sending…');
-    const outcome = await handleIncomingSms(body);
+    const outcome = await handleIncomingSms(token, body);
     setResult(outcome.detail);
   };
 

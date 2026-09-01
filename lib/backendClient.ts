@@ -24,23 +24,37 @@ export type Baseline = {
   isLearned: boolean;
 };
 
-export function createBackendSocket(): Socket | null {
-  if (!BACKEND_URL) return null;
+/**
+ * The socket carries per-user data, so it authenticates during the
+ * handshake — the server rejects the connection outright without a token.
+ */
+export function createBackendSocket(token: string): Socket | null {
+  if (!BACKEND_URL || !token) return null;
   return io(BACKEND_URL, {
     transports: ['websocket'],
     reconnectionAttempts: 3,
     timeout: 3000,
+    auth: { token },
   });
 }
 
-export async function simulateOnBackend(): Promise<boolean> {
-  if (!BACKEND_URL) return false;
+/** Every data request is authenticated; the caller supplies the token. */
+async function authedPost(path: string, token: string, body?: unknown): Promise<Response | null> {
+  if (!BACKEND_URL || !token) return null;
   try {
-    const res = await fetch(`${BACKEND_URL}/api/simulate`, { method: 'POST' });
-    return res.ok;
+    return await fetch(`${BACKEND_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function simulateOnBackend(token: string): Promise<boolean> {
+  const res = await authedPost('/api/simulate', token);
+  return Boolean(res?.ok);
 }
 
 /**
@@ -48,24 +62,18 @@ export async function simulateOnBackend(): Promise<boolean> {
  * Only the structured result is sent — the SMS text itself never leaves the
  * phone.
  */
-export async function ingestTransaction(tx: {
-  merchant: string;
-  category: string;
-  amount: number;
-  timestamp: number;
-  source: 'sms' | 'account_aggregator';
-}): Promise<boolean> {
-  if (!BACKEND_URL) return false;
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/ingest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tx),
-    });
-    return res.ok;
-  } catch {
-    return false;
+export async function ingestTransaction(
+  token: string,
+  tx: {
+    merchant: string;
+    category: string;
+    amount: number;
+    timestamp: number;
+    source: 'sms' | 'account_aggregator';
   }
+): Promise<boolean> {
+  const res = await authedPost('/api/ingest', token, tx);
+  return Boolean(res?.ok);
 }
 
 /**
@@ -77,16 +85,7 @@ export async function ingestTransaction(tx: {
  * Returns false when there's no backend (local fallback mode) — the caller
  * should still update its own UI in that case.
  */
-export async function submitVerdict(id: string, verdict: 'safe' | 'fraud'): Promise<boolean> {
-  if (!BACKEND_URL) return false;
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/transactions/${encodeURIComponent(id)}/verdict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verdict }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+export async function submitVerdict(token: string, id: string, verdict: 'safe' | 'fraud'): Promise<boolean> {
+  const res = await authedPost(`/api/transactions/${encodeURIComponent(id)}/verdict`, token, { verdict });
+  return Boolean(res?.ok);
 }
