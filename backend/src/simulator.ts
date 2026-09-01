@@ -3,45 +3,46 @@ import { computeBaseline } from './baseline';
 import { generateRawTransaction, RawTransaction, scoreTransaction } from './engine';
 import { insertTransaction } from './db';
 
-let timer: ReturnType<typeof setTimeout> | null = null;
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**
- * Produces one transaction: generate a raw event, score it against the
- * CURRENT learned baseline, store it, and push it to every connected client.
- * Exported so the manual "Run" button in the app goes through the exact
- * same path as the automatic ticker.
+ * Scores, stores and broadcasts one transaction for one user, whatever
+ * produced it. A parsed bank SMS from a phone and a simulated event go
+ * through this exact same path — detection never knows which it was.
+ *
+ * Emission is scoped to the user's own socket room, so one account's
+ * transactions can never surface in another's feed.
  */
-export function emitTransaction(io: Server) {
-  return ingestTransaction(io, generateRawTransaction());
-}
-
-/**
- * Scores, stores and broadcasts one transaction, whatever produced it.
- * A parsed bank SMS from a phone and a simulated event go through this
- * exact same path — the detection never knows or cares which it was.
- */
-export function ingestTransaction(io: Server, raw: RawTransaction) {
-  const event = scoreTransaction(raw, computeBaseline());
-  insertTransaction({ ...event, reasons: JSON.stringify(event.reasons) });
-  io.emit('transaction', event);
-  io.emit('baseline', computeBaseline());
+export function ingestTransaction(io: Server, userId: string, raw: RawTransaction) {
+  const event = scoreTransaction(raw, computeBaseline(userId));
+  insertTransaction(userId, { ...event, reasons: JSON.stringify(event.reasons) });
+  io.to(userId).emit('transaction', event);
+  io.to(userId).emit('baseline', computeBaseline(userId));
   return event;
 }
 
+export function emitTransaction(io: Server, userId: string) {
+  return ingestTransaction(io, userId, generateRawTransaction());
+}
+
 /**
- * Stand-in for a real event source. Runs only while no Account Aggregator
- * client is configured (see aa/setu.ts).
+ * Demo data generator, per user. Only runs while a user actually has a
+ * client connected — there's no point inventing transactions for accounts
+ * nobody is watching, and it would quietly bloat their history.
  */
-export function startSimulator(io: Server, intervalMs: number) {
+export function startSimulator(io: Server, userId: string, intervalMs: number) {
+  if (timers.has(userId)) return;
+
   const tick = () => {
-    emitTransaction(io);
+    emitTransaction(io, userId);
     const jitter = intervalMs * 0.4 * (Math.random() - 0.5);
-    timer = setTimeout(tick, intervalMs + jitter);
+    timers.set(userId, setTimeout(tick, intervalMs + jitter));
   };
   tick();
 }
 
-export function stopSimulator() {
+export function stopSimulator(userId: string) {
+  const timer = timers.get(userId);
   if (timer) clearTimeout(timer);
-  timer = null;
+  timers.delete(userId);
 }

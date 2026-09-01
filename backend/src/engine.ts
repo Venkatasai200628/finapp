@@ -1,4 +1,4 @@
-import { Baseline, computeBaseline, SEED_BASELINE } from './baseline';
+import { Baseline, SEED_BASELINE } from './baseline';
 
 export type Severity = 'good' | 'warn' | 'danger';
 
@@ -79,7 +79,7 @@ export function generateRawTransaction(): RawTransaction {
  * unlike what this person normally does", which is a reason to look, not
  * evidence of a threat.
  */
-export function scoreTransaction(input: RawTransaction, baseline: Baseline = computeBaseline()): EngineTransaction {
+export function scoreTransaction(input: RawTransaction, baseline: Baseline): EngineTransaction {
   // Income isn't spending — scoring it against spending norms only ever
   // produces noise (a salary credit is not a suspicious grocery run).
   if (input.amount >= 0) {

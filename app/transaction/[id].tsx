@@ -8,6 +8,7 @@ import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import ScreenGlow from '../../components/ScreenGlow';
 import { submitVerdict } from '../../lib/backendClient';
+import { useAuth } from '../../context/AuthContext';
 import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 
 const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -37,12 +38,13 @@ export default function TransactionDetailScreen() {
   const reasons = params.reasons ? params.reasons.split('|').filter(Boolean) : [];
   const icon = CATEGORY_ICON[params.category ?? ''] ?? 'help-circle';
 
+  const { token } = useAuth();
   const [resolution, setResolution] = useState<'none' | 'safe' | 'reported'>('none');
   const [syncedToEngine, setSyncedToEngine] = useState(false);
 
   const review = async (verdict: 'safe' | 'fraud') => {
     setResolution(verdict === 'safe' ? 'safe' : 'reported');
-    setSyncedToEngine(await submitVerdict(params.id, verdict));
+    setSyncedToEngine(token ? await submitVerdict(token, params.id, verdict) : false);
   };
 
   return (

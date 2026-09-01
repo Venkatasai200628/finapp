@@ -9,6 +9,7 @@ import ScreenGlow from '../../components/ScreenGlow';
 import LiveIndicator from '../../components/LiveIndicator';
 import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 import { useSettings } from '../../context/SettingsContext';
+import { useAuth } from '../../context/AuthContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
 const SENSITIVITY_OPTIONS: Array<{ key: 'low' | 'medium' | 'high'; label: string; note: string }> = [
@@ -99,6 +100,7 @@ export default function SettingsScreen() {
     dataSource,
     baseline,
   } = useSettings();
+  const { email, signOut } = useAuth();
   const { isDesktop } = useResponsive();
 
   return (
@@ -255,6 +257,22 @@ export default function SettingsScreen() {
                 </View>
               </>
             )}
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(290).duration(450)}>
+          <Card style={styles.card}>
+            <SettingsRow
+              icon="person-circle"
+              iconColor={colors.accent2}
+              title={email ?? 'Signed in'}
+              subtitle="Your transactions and profile are private to this account"
+              right={
+                <Pressable style={styles.signOutBtn} onPress={signOut}>
+                  <Text style={styles.signOutText}>Sign out</Text>
+                </Pressable>
+              }
+            />
           </Card>
         </Animated.View>
 
@@ -418,6 +436,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fontFamily.extraBold,
     color: colors.ringCore,
+  },
+  signOutBtn: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  signOutText: {
+    fontSize: 12,
+    fontFamily: fontFamily.bold,
+    color: colors.textSecondary,
   },
   groupLabel: {
     fontSize: 11,

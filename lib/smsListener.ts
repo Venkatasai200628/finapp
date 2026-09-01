@@ -51,7 +51,10 @@ export function isSmsCaptureSupported(): boolean {
  * engine. Exported so the manual test screen runs the identical path a real
  * incoming message would.
  */
-export async function handleIncomingSms(body: string): Promise<{ ingested: boolean; detail: string }> {
+export async function handleIncomingSms(
+  token: string | null,
+  body: string
+): Promise<{ ingested: boolean; detail: string }> {
   const parsed = parseTransactionSms(body);
   if (!parsed) {
     return { ingested: false, detail: 'Not a transaction message — ignored.' };
@@ -63,13 +66,15 @@ export async function handleIncomingSms(body: string): Promise<{ ingested: boole
     return { ingested: false, detail: `Parsed too weakly (confidence ${parsed.confidence}) — ignored.` };
   }
 
-  const ok = await ingestTransaction({
-    merchant: parsed.merchant,
-    category: parsed.category,
-    amount: parsed.amount,
-    timestamp: Date.now(),
-    source: 'sms',
-  });
+  const ok = token
+    ? await ingestTransaction(token, {
+        merchant: parsed.merchant,
+        category: parsed.category,
+        amount: parsed.amount,
+        timestamp: Date.now(),
+        source: 'sms',
+      })
+    : false;
 
   const sign = parsed.amount < 0 ? '−' : '+';
   const summary = `${sign}₹${Math.abs(parsed.amount).toLocaleString('en-IN')} · ${parsed.merchant} · ${parsed.category}`;
@@ -79,7 +84,10 @@ export async function handleIncomingSms(body: string): Promise<{ ingested: boole
   };
 }
 
-export async function startSmsCapture(onStatus: (status: SmsStatus) => void): Promise<void> {
+export async function startSmsCapture(
+  getToken: () => string | null,
+  onStatus: (status: SmsStatus) => void
+): Promise<void> {
   if (Platform.OS === 'ios') {
     onStatus({ state: 'unavailable', reason: 'iOS does not allow apps to read SMS. Use Account Aggregator instead.' });
     return;
@@ -104,8 +112,9 @@ export async function startSmsCapture(onStatus: (status: SmsStatus) => void): Pr
     native.startReadSMS(
       (_status, sms) => {
         // Fire and forget: a slow or failed round-trip must never block the
-        // native callback, or later messages get dropped.
-        void handleIncomingSms(sms);
+        // native callback, or later messages get dropped. The token is read
+        // at call time so a re-login doesn't leave a stale one captured.
+        void handleIncomingSms(getToken(), sms);
       },
       (error) => onStatus({ state: 'error', reason: String(error) })
     );

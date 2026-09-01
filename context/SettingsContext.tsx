@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, u
 import type { Socket } from 'socket.io-client';
 import { generateTransactionEvent, LiveTransaction } from '../lib/realtimeEngine';
 import { Baseline, BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
+import { useAuth } from './AuthContext';
 
 type SettingsState = {
   realtimeDetectionEnabled: boolean;
@@ -28,6 +29,7 @@ const SENSITIVITY_INTERVAL: Record<'low' | 'medium' | 'high', number> = {
 };
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { token } = useAuth();
   const [realtimeDetectionEnabled, setRealtimeDetectionEnabled] = useState(true);
   const [sensitivity, setSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const [liveFeed, setLiveFeed] = useState<LiveTransaction[]>([]);
@@ -42,9 +44,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setLiveFeed((prev) => [event, ...prev].slice(0, 25));
   }, []);
 
-  // --- Real backend connection, when EXPO_PUBLIC_BACKEND_URL is set ---
+  // --- Real backend connection. Reconnects when the signed-in user changes,
+  // so switching accounts never leaves the previous user's stream attached.
   useEffect(() => {
-    const socket = createBackendSocket();
+    setLiveFeed([]);
+    setBaseline(null);
+
+    const socket = token ? createBackendSocket(token) : null;
     if (!socket) {
       setDataSource('local');
       return;
@@ -65,19 +71,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       socketRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   const triggerSimulatedTransaction = useCallback(async () => {
-    if (dataSource === 'live') {
-      const ok = await simulateOnBackend();
+    if (dataSource === 'live' && token) {
+      const ok = await simulateOnBackend(token);
       if (ok) return; // the server will emit the event back over the socket
     }
     pushEvent(generateTransactionEvent());
-  }, [dataSource, pushEvent]);
+  }, [dataSource, pushEvent, token]);
 
   // --- On-device fallback simulation, only when there is no live backend ---
   useEffect(() => {
-    if (!realtimeDetectionEnabled || dataSource === 'live') {
+    // Requires a signed-in user: otherwise the sign-in screen would sit
+    // behind a stream of invented transactions and fire alerts at someone
+    // who has no account yet.
+    if (!token || !realtimeDetectionEnabled || dataSource === 'live') {
       if (timerRef.current) clearTimeout(timerRef.current);
       return;
     }
@@ -95,7 +104,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [realtimeDetectionEnabled, sensitivity, pushEvent, dataSource]);
+  }, [token, realtimeDetectionEnabled, sensitivity, pushEvent, dataSource]);
 
   const liveAlerts = liveFeed.filter((e) => e.severity === 'danger');
 
