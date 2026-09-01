@@ -38,6 +38,55 @@ export function createBackendSocket(token: string): Socket | null {
   });
 }
 
+// ---- Trading bot monitoring (read-only) ----
+
+export type TradingFlag = { id: string; severity: 'good' | 'warn' | 'danger'; title: string; detail: string };
+
+export type TradingStatus = {
+  connection: { connected: false; reason: string } | { connected: true; path: string; mode: 'PAPER' | 'LIVE' | 'UNKNOWN' };
+  summary?: {
+    totalTrades: number;
+    wins: number;
+    losses: number;
+    winRate: number;
+    totalPnl: number;
+    avgPnlPct: number;
+    openCount: number;
+    openExposure: number;
+    bestTrade: number;
+    worstTrade: number;
+    currentStreak: { kind: 'win' | 'loss' | 'none'; count: number };
+    maxDrawdown: number;
+  };
+  exposure?: Array<{ symbol: string; exposure: number; share: number }>;
+  flags?: TradingFlag[];
+  equity?: number[];
+  openPositions?: Array<{
+    id: number;
+    symbol: string;
+    direction: string;
+    entry_price: number;
+    size_usdt: number;
+    stop_loss: number | null;
+    take_profit: number | null;
+    entry_reason: string | null;
+    opened_at: string;
+  }>;
+};
+
+export async function fetchTradingStatus(token: string): Promise<TradingStatus | null> {
+  if (!BACKEND_URL || !token) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/trading/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as TradingStatus;
+  } catch {
+    return null;
+  }
+}
+
 /** Every data request is authenticated; the caller supplies the token. */
 async function authedPost(path: string, token: string, body?: unknown): Promise<Response | null> {
   if (!BACKEND_URL || !token) return null;

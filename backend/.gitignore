@@ -6,3 +6,5 @@ fin-data.json
 fin.db
 fin.db-wal
 fin.db-shm
+bot-fixture.db
+bot.db
