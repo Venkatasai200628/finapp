@@ -44,6 +44,31 @@ export async function simulateOnBackend(): Promise<boolean> {
 }
 
 /**
+ * Sends a real transaction (parsed on-device from a bank SMS) to the engine.
+ * Only the structured result is sent — the SMS text itself never leaves the
+ * phone.
+ */
+export async function ingestTransaction(tx: {
+  merchant: string;
+  category: string;
+  amount: number;
+  timestamp: number;
+  source: 'sms' | 'account_aggregator';
+}): Promise<boolean> {
+  if (!BACKEND_URL) return false;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tx),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Sends the user's review of a flagged transaction to the engine. A 'safe'
  * verdict lets that transaction start teaching the baseline; 'fraud'
  * permanently excludes it, so reporting fraud can never widen what the
