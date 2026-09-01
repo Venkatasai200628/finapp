@@ -1,5 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import type { Socket } from 'socket.io-client';
 import { generateTransactionEvent, LiveTransaction } from '../lib/realtimeEngine';
+import { BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
 
 type SettingsState = {
   realtimeDetectionEnabled: boolean;
@@ -10,6 +12,9 @@ type SettingsState = {
   liveAlerts: LiveTransaction[];
   triggerSimulatedTransaction: () => void;
   lastScanAt: number | null;
+  /** 'live' = events are streaming from the real backend over WebSocket.
+   *  'local' = no backend configured/reachable, running the on-device fallback simulation. */
+  dataSource: 'live' | 'local' | 'connecting';
 };
 
 const SettingsContext = createContext<SettingsState | undefined>(undefined);
@@ -25,19 +30,50 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [sensitivity, setSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const [liveFeed, setLiveFeed] = useState<LiveTransaction[]>([]);
   const [lastScanAt, setLastScanAt] = useState<number | null>(null);
+  const [dataSource, setDataSource] = useState<'live' | 'local' | 'connecting'>(BACKEND_URL ? 'connecting' : 'local');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   const pushEvent = useCallback((event: LiveTransaction) => {
     setLastScanAt(Date.now());
     setLiveFeed((prev) => [event, ...prev].slice(0, 25));
   }, []);
 
-  const triggerSimulatedTransaction = useCallback(() => {
-    pushEvent(generateTransactionEvent());
-  }, [pushEvent]);
-
+  // --- Real backend connection, when EXPO_PUBLIC_BACKEND_URL is set ---
   useEffect(() => {
-    if (!realtimeDetectionEnabled) {
+    const socket = createBackendSocket();
+    if (!socket) {
+      setDataSource('local');
+      return;
+    }
+    socketRef.current = socket;
+
+    socket.on('connect', () => setDataSource('live'));
+    socket.on('disconnect', () => setDataSource('local'));
+    socket.on('connect_error', () => setDataSource('local'));
+    socket.on('history', (rows: LiveTransaction[]) => {
+      setLiveFeed((prev) => (prev.length ? prev : rows.slice(0, 25)));
+    });
+    socket.on('transaction', (event: LiveTransaction) => pushEvent(event));
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const triggerSimulatedTransaction = useCallback(async () => {
+    if (dataSource === 'live') {
+      const ok = await simulateOnBackend();
+      if (ok) return; // the server will emit the event back over the socket
+    }
+    pushEvent(generateTransactionEvent());
+  }, [dataSource, pushEvent]);
+
+  // --- On-device fallback simulation, only when there is no live backend ---
+  useEffect(() => {
+    if (!realtimeDetectionEnabled || dataSource === 'live') {
       if (timerRef.current) clearTimeout(timerRef.current);
       return;
     }
@@ -55,7 +91,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [realtimeDetectionEnabled, sensitivity, pushEvent]);
+  }, [realtimeDetectionEnabled, sensitivity, pushEvent, dataSource]);
 
   const liveAlerts = liveFeed.filter((e) => e.severity === 'danger');
 
@@ -70,6 +106,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         liveAlerts,
         triggerSimulatedTransaction,
         lastScanAt,
+        dataSource,
       }}
     >
       {children}

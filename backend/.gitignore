@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env
+fin-data.json
+*.log
