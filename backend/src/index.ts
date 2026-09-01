@@ -22,13 +22,16 @@ const io = new Server(httpServer, { cors: { origin: '*' } });
 
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
-app.use('/api', authRouter);
-app.use('/api', createTransactionsRouter(io));
-app.use('/api', tradingRouter);
-
+// Public. Must precede the authed routers below: their router-level
+// requireAuth applies to every path under the shared /api mount, so a
+// public route declared after them never runs.
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dataSource: aaConfigured() ? 'account_aggregator' : 'simulator' });
 });
+
+app.use('/api', authRouter);
+app.use('/api', createTransactionsRouter(io));
+app.use('/api', tradingRouter);
 
 // Manually trigger one demo event (the app's "Run" button in Settings).
 app.post('/api/simulate', requireAuth, (req: AuthedRequest, res) => {
