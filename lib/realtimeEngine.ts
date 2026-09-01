@@ -8,6 +8,7 @@ export type LiveTransaction = {
   timestamp: number;
   severity: 'good' | 'warn' | 'danger';
   reasons: string[];
+  source?: 'simulator' | 'account_aggregator' | 'sms';
 };
 
 function randomOf<T>(arr: T[]): T {

@@ -81,9 +81,21 @@ function SettingsRow({
   );
 }
 
+const DATA_SOURCE_LABEL: Record<string, string> = {
+  live: 'Live — connected to backend',
+  local: 'Local simulation (no backend)',
+  connecting: 'Connecting to backend…',
+};
+
 export default function SettingsScreen() {
-  const { realtimeDetectionEnabled, setRealtimeDetectionEnabled, liveFeed, liveAlerts, triggerSimulatedTransaction } =
-    useSettings();
+  const {
+    realtimeDetectionEnabled,
+    setRealtimeDetectionEnabled,
+    liveFeed,
+    liveAlerts,
+    triggerSimulatedTransaction,
+    dataSource,
+  } = useSettings();
   const { isDesktop } = useResponsive();
 
   return (
@@ -110,6 +122,15 @@ export default function SettingsScreen() {
               Instantly evaluate each transaction against your normal spending behavior — amount, time, merchant —
               and warn you the moment something looks unusual.
             </Text>
+            <View style={styles.sourceBadge}>
+              <View
+                style={[
+                  styles.sourceDot,
+                  { backgroundColor: dataSource === 'live' ? colors.good : dataSource === 'local' ? colors.warn : colors.textMuted },
+                ]}
+              />
+              <Text style={styles.sourceText}>{DATA_SOURCE_LABEL[dataSource]}</Text>
+            </View>
             <View style={styles.heroStatsRow}>
               <View style={styles.heroStat}>
                 <LiveIndicator active={realtimeDetectionEnabled} />
@@ -230,6 +251,22 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginTop: spacing.sm,
     lineHeight: 19,
+  },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+  },
+  sourceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  sourceText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.textMuted,
   },
   heroStatsRow: {
     flexDirection: 'row',
