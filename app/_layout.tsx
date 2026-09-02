@@ -15,6 +15,7 @@ import {
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
+import { BudgetsProvider } from '../context/BudgetsContext';
 import LiveAlertToast from '../components/LiveAlertToast';
 import { colors, fontFamily } from '../constants/theme';
 
@@ -88,9 +89,11 @@ export default function RootLayout() {
       <AuthProvider>
         <SettingsProvider>
           <GoalsProvider>
-            <StatusBar style="light" />
-            <AuthGate />
-            <LiveAlertToast />
+            <BudgetsProvider>
+              <StatusBar style="light" />
+              <AuthGate />
+              <LiveAlertToast />
+            </BudgetsProvider>
           </GoalsProvider>
         </SettingsProvider>
       </AuthProvider>

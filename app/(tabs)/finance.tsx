@@ -10,11 +10,8 @@ import CategoryDonut from '../../components/CategoryDonut';
 import TransactionRow from '../../components/TransactionRow';
 import SeverityBadge from '../../components/SeverityBadge';
 import StatCard from '../../components/StatCard';
-import BudgetRow from '../../components/BudgetRow';
-import GoalCard from '../../components/GoalCard';
-import { budgets, cashFlowForecast, categorySpend, monthlySummary, stressTrend, transactions } from '../../data/mockData';
+import { cashFlowForecast, categorySpend, monthlySummary, stressTrend, transactions } from '../../data/mockData';
 import { colors, fontFamily, spacing, typography } from '../../constants/theme';
-import { useGoals } from '../../context/GoalsContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
 function formatCurrency(n: number) {
@@ -33,7 +30,6 @@ function txParams(tx: (typeof transactions)[number]) {
 }
 
 export default function FinanceScreen() {
-  const { goals } = useGoals();
   const { isDesktop } = useResponsive();
 
   return (
@@ -60,33 +56,11 @@ export default function FinanceScreen() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(180).duration(500)}>
-          <View style={styles.sectionHeader}>
-            <Text style={typography.h2}>Savings Goals</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.goalsRow}>
-            {goals.map((g, i) => (
-              <GoalCard key={g.id} goal={g} delay={i * 60} onPress={() => router.push(`/goal/${g.id}`)} />
-            ))}
-          </ScrollView>
-        </Animated.View>
-
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
           <Card style={styles.card}>
             <Text style={typography.h3}>Spending by Category</Text>
             <View style={{ marginTop: spacing.md }}>
               <CategoryDonut data={categorySpend} />
-            </View>
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(220).duration(500)}>
-          <Card style={styles.card}>
-            <Text style={typography.h3}>Budget vs Actual</Text>
-            <View style={{ marginTop: spacing.md }}>
-              {budgets.map((b, i) => (
-                <BudgetRow key={b.category} budget={b} delay={i * 40} />
-              ))}
             </View>
           </Card>
         </Animated.View>
@@ -239,13 +213,6 @@ const styles = StyleSheet.create({
   riskLine: {
     ...typography.body,
     marginTop: 4,
-  },
-  sectionHeader: {
-    marginBottom: spacing.md,
-  },
-  goalsRow: {
-    gap: spacing.sm,
-    paddingBottom: spacing.lg,
   },
   transactionsHeader: {
     flexDirection: 'row',
