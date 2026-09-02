@@ -30,12 +30,6 @@ const SOURCE_STEPS: Record<string, string[]> = {
     'Compared against healthy-range thresholds',
     'Alert raised',
   ],
-  trading: [
-    'Portfolio activity monitored',
-    'Compared to historical investment behavior',
-    'Significant deviation detected',
-    'Alert raised',
-  ],
 };
 
 export default function AlertDetailScreen() {

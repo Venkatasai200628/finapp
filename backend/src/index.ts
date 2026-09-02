@@ -5,7 +5,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createTransactionsRouter } from './routes/transactions';
 import { authRouter } from './routes/auth';
-import { tradingRouter } from './routes/trading';
 import { AuthedRequest, requireAuth, userIdFromToken, usingEphemeralSecret } from './auth';
 import { startSimulator, stopSimulator, emitTransaction, ingestTransaction } from './simulator';
 import { computeBaseline } from './baseline';
@@ -31,7 +30,6 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api', authRouter);
 app.use('/api', createTransactionsRouter(io));
-app.use('/api', tradingRouter);
 
 // Manually trigger one demo event (the app's "Run" button in Settings).
 app.post('/api/simulate', requireAuth, (req: AuthedRequest, res) => {
