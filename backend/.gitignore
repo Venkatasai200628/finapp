@@ -8,3 +8,4 @@ fin.db-wal
 fin.db-shm
 bot-fixture.db
 bot.db
+backend/.bin/
