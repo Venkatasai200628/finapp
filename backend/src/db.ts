@@ -6,8 +6,12 @@ import path from 'path';
  * Uses Node's built-in SQLite (Node 22.5+), so there is no native module to
  * compile — better-sqlite3 needs Visual Studio Build Tools on Windows, which
  * is a bad dependency to impose just to store rows.
+ *
+ * DB_PATH lets production point this at a persistent volume (see fly.toml —
+ * mounted at /data) instead of the project folder, so the database survives
+ * redeploys instead of living inside the container's throwaway filesystem.
  */
-const DB_FILE = path.join(__dirname, '..', 'fin.db');
+const DB_FILE = process.env.DB_PATH || path.join(__dirname, '..', 'fin.db');
 export const db = new DatabaseSync(DB_FILE);
 
 db.exec('PRAGMA journal_mode = WAL');
