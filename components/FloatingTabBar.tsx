@@ -10,12 +10,14 @@ import { SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: 'home',
   finance: 'wallet',
+  insights: 'bar-chart',
   settings: 'settings-sharp',
 };
 
 const LABELS: Record<string, string> = {
   index: 'Home',
   finance: 'Finance',
+  insights: 'Insights',
   settings: 'Settings',
 };
 

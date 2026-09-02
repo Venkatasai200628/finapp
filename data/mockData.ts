@@ -59,6 +59,29 @@ export const categorySpend: CategorySpend[] = [
   { category: 'Other', amount: 10600, color: '#5B6B82' },
 ];
 
+// Same categories, previous month — used to show month-over-month movement
+// in Insights rather than just a static snapshot.
+export const categorySpendLastMonth: Record<string, number> = {
+  'Food & Dining': 7800,
+  Groceries: 6900,
+  Transport: 3600,
+  Subscriptions: 2300,
+  Shopping: 5200,
+  Other: 9100,
+};
+
+// ---- Six-month history, for the Insights reports section ----
+export type MonthlyPoint = { month: string; income: number; expense: number; savings: number };
+
+export const monthlyTrend: MonthlyPoint[] = [
+  { month: 'Apr', income: 54000, expense: 39500, savings: 14500 },
+  { month: 'May', income: 56500, expense: 41200, savings: 15300 },
+  { month: 'Jun', income: 58000, expense: 44800, savings: 13200 },
+  { month: 'Jul', income: 59500, expense: 46100, savings: 13400 },
+  { month: 'Aug', income: 60800, expense: 43900, savings: 16900 },
+  { month: 'Sep', income: 62000, expense: 41500, savings: 20500 },
+];
+
 export const alerts: Alert[] = [
   {
     id: 'a1',
