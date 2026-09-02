@@ -1,0 +1,22 @@
+# Render Blueprint for fin-backend.
+#
+# Render's free web-service tier does NOT require a card on file (unlike
+# Fly.io), which is why we're using it here. The tradeoff: free tier has no
+# persistent disk, so the SQLite file lives in the container's throwaway
+# filesystem and resets on redeploys / instance recycling. DB_PATH is left
+# unset on purpose so db.ts falls back to its default in-project path -
+# there's no volume to point it at on this plan.
+services:
+  - type: web
+    name: fin-backend
+    runtime: node
+    plan: free
+    region: singapore # closest free-tier region to India
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        sync: false # set manually in the Render dashboard, never committed
