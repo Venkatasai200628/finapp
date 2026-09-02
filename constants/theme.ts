@@ -39,7 +39,6 @@ export const gradients = {
   card: ['#0c1618', '#05090c'] as const,
   danger: ['#7a1f2e', '#ff6b6b'] as const,
   live: ['#5eead4', '#22c3a6'] as const,
-  trading: ['#0a2540', '#38bdf8'] as const,
 };
 
 export const spacing = {

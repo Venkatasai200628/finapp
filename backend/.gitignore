@@ -9,3 +9,4 @@ fin.db-shm
 bot-fixture.db
 bot.db
 backend/.bin/
+bot-sample.db

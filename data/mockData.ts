@@ -6,7 +6,7 @@ export type Alert = {
   title: string;
   detail: string;
   time: string;
-  source: 'transaction' | 'forecast' | 'risk' | 'trading';
+  source: 'transaction' | 'forecast' | 'risk';
 };
 
 export type Transaction = {
