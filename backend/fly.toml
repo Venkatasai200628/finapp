@@ -1,0 +1,37 @@
+# Fly.io app config for fin-backend.
+#
+# `app` gets overwritten to whatever name you pick when you run
+# `flyctl launch` for the first time — that's expected, leave it as-is here.
+app = "fin-backend"
+primary_region = "bom"  # Mumbai — closest to India; change if you're elsewhere
+
+[build]
+
+[env]
+  PORT = "4000"
+  # DB_PATH points at the persistent volume mounted below, so the database
+  # survives redeploys instead of living in the container's throwaway
+  # filesystem. JWT_SECRET is NOT set here on purpose — secrets go through
+  # `flyctl secrets set`, never committed to a config file in the repo.
+  DB_PATH = "/data/fin.db"
+
+[[mounts]]
+  source = "fin_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  # Stops the machine when idle and restarts it on the next request — keeps
+  # this comfortably inside Fly's free allowance. Safe to do here specifically
+  # because the database lives on the separate persistent volume above, not
+  # in the container itself, so nothing is lost when it stops. There's a
+  # brief cold-start delay (a couple seconds) on the first request after idle.
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
