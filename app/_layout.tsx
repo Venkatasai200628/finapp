@@ -17,6 +17,7 @@ import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
 import { BudgetsProvider } from '../context/BudgetsContext';
 import LiveAlertToast from '../components/LiveAlertToast';
+import MobileWebBlocker from '../components/MobileWebBlocker';
 import { colors, fontFamily } from '../constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -86,17 +87,19 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AuthProvider>
-        <SettingsProvider>
-          <GoalsProvider>
-            <BudgetsProvider>
-              <StatusBar style="light" />
-              <AuthGate />
-              <LiveAlertToast />
-            </BudgetsProvider>
-          </GoalsProvider>
-        </SettingsProvider>
-      </AuthProvider>
+      <MobileWebBlocker>
+        <AuthProvider>
+          <SettingsProvider>
+            <GoalsProvider>
+              <BudgetsProvider>
+                <StatusBar style="light" />
+                <AuthGate />
+                <LiveAlertToast />
+              </BudgetsProvider>
+            </GoalsProvider>
+          </SettingsProvider>
+        </AuthProvider>
+      </MobileWebBlocker>
     </GestureHandlerRootView>
   );
 }
