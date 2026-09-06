@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, u
 import type { Socket } from 'socket.io-client';
 import { generateTransactionEvent, LiveTransaction } from '../lib/realtimeEngine';
 import { Baseline, BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
+import { startSmsCapture, SmsStatus } from '../lib/smsListener';
 import { useAuth } from './AuthContext';
 
 type SettingsState = {
@@ -13,6 +14,7 @@ type SettingsState = {
   liveAlerts: LiveTransaction[];
   triggerSimulatedTransaction: () => void;
   lastScanAt: number | null;
+  smsStatus: SmsStatus | null;
   /** 'live' = events are streaming from the real backend over WebSocket.
    *  'local' = no backend configured/reachable, running the on-device fallback simulation. */
   dataSource: 'live' | 'local' | 'connecting';
@@ -38,6 +40,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const [smsStatus, setSmsStatus] = useState<SmsStatus | null>(null);
+
+  // Keep tokenRef in sync so the SMS callback always uses the latest token
+  useEffect(() => { tokenRef.current = token; }, [token]);
 
   const pushEvent = useCallback((event: LiveTransaction) => {
     setLastScanAt(Date.now());
@@ -106,6 +113,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
   }, [token, realtimeDetectionEnabled, sensitivity, pushEvent, dataSource]);
 
+  // --- Auto-start SMS listener when user logs in ---
+  // This is the core of real-time bank transaction detection on Android.
+  // It requests SMS permission once, then silently listens in the background.
+  useEffect(() => {
+    if (!token || !realtimeDetectionEnabled) return;
+    startSmsCapture(() => tokenRef.current, setSmsStatus);
+  }, [token, realtimeDetectionEnabled]);
+
   const liveAlerts = liveFeed.filter((e) => e.severity === 'danger');
 
   return (
@@ -119,6 +134,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         liveAlerts,
         triggerSimulatedTransaction,
         lastScanAt,
+        smsStatus,
         dataSource,
         baseline,
       }}
