@@ -92,7 +92,7 @@ export default function RootLayout() {
           <SettingsProvider>
             <GoalsProvider>
               <BudgetsProvider>
-                <StatusBar style="light" />
+                <StatusBar style="auto" />
                 <AuthGate />
                 <LiveAlertToast />
               </BudgetsProvider>

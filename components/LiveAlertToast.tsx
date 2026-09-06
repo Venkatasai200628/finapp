@@ -23,7 +23,7 @@ export default function LiveAlertToast() {
 
   return (
     <Animated.View
-      entering={SlideInUp.springify().damping(16)}
+      entering={SlideInUp.duration(300)}
       exiting={SlideOutUp.duration(250)}
       style={[styles.wrap, { top: insets.top + spacing.sm }, shadow.floating]}
     >

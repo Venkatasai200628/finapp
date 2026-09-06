@@ -2,34 +2,69 @@
 // glass surfaces, Lexend throughout. See components/Card.tsx and
 // components/ScreenGlow.tsx for how these tokens become the glass effect.
 
-export const colors = {
-  bg: '#05090c',
-  bgAlt: '#020304',
-  panelSolid: '#0b1518', // solid (non-blurred) dark panel, for surfaces with nothing behind them to blur
-  glow1: '#0d3d3f', // teal glow, top-left
-  glow2: '#0a2540', // blue glow, right side
-  surface: 'rgba(200,250,255,0.05)',
-  surfaceSoft: 'rgba(200,250,255,0.04)',
-  surfaceStrong: 'rgba(200,250,255,0.07)',
-  surfaceAlt: 'rgba(200,250,255,0.06)',
-  surfaceHi: 'rgba(200,250,255,0.09)',
-  border: 'rgba(180,245,255,0.14)',
-  borderStrong: 'rgba(180,245,255,0.22)',
-  borderSoft: 'rgba(180,245,255,0.1)',
-  textPrimary: '#eafcff',
-  textSecondary: '#8fc9d1',
-  textMuted: '#537077',
-  accent: '#5eead4',
+import { Appearance } from 'react-native';
+
+const isLight = Appearance.getColorScheme() === 'light';
+
+export const lightColors = {
+  bg: '#ffffff',
+  bgAlt: '#f8fafc',
+  panelSolid: '#ffffff',
+  glow1: '#e0f2fe',
+  glow2: '#dcfce3',
+  surface: 'rgba(0,0,0,0.03)',
+  surfaceSoft: 'rgba(0,0,0,0.02)',
+  surfaceStrong: 'rgba(0,0,0,0.06)',
+  surfaceAlt: 'rgba(0,0,0,0.04)',
+  surfaceHi: 'rgba(0,0,0,0.08)',
+  border: 'rgba(0,0,0,0.1)',
+  borderStrong: 'rgba(0,0,0,0.15)',
+  borderSoft: 'rgba(0,0,0,0.05)',
+  textPrimary: '#0f172a',
+  textSecondary: '#475569',
+  textMuted: '#94a3b8',
+  accent: '#0ea5e9',
   accent2: '#38bdf8',
-  income: '#5eead4',
-  expense: '#ff9270',
-  savings: '#7dd3fc',
-  good: '#5eead4',
-  warn: '#fbbf6d',
-  danger: '#ff6b6b',
-  live: '#5eead4',
-  ringCore: '#06181a',
+  income: '#10b981',
+  expense: '#ef4444',
+  savings: '#0ea5e9',
+  good: '#10b981',
+  warn: '#f59e0b',
+  danger: '#ef4444',
+  live: '#0ea5e9',
+  ringCore: '#f1f5f9',
 };
+
+export const darkColors = {
+  bg: '#121212',
+  bgAlt: '#000000',
+  panelSolid: '#1e1e1e',
+  glow1: '#121212',
+  glow2: '#121212',
+  surface: 'rgba(255,255,255,0.06)',
+  surfaceSoft: 'rgba(255,255,255,0.04)',
+  surfaceStrong: 'rgba(255,255,255,0.1)',
+  surfaceAlt: 'rgba(255,255,255,0.08)',
+  surfaceHi: 'rgba(255,255,255,0.12)',
+  border: 'rgba(255,255,255,0.15)',
+  borderStrong: 'rgba(255,255,255,0.25)',
+  borderSoft: 'rgba(255,255,255,0.1)',
+  textPrimary: '#f8fafc',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+  accent: '#38bdf8',
+  accent2: '#7dd3fc',
+  income: '#34d399',
+  expense: '#f87171',
+  savings: '#38bdf8',
+  good: '#34d399',
+  warn: '#fbbf24',
+  danger: '#f87171',
+  live: '#38bdf8',
+  ringCore: '#1e293b',
+};
+
+export const colors = isLight ? lightColors : darkColors;
 
 export const gradients = {
   hero: ['#0f4c4f', '#0a2540'] as const,

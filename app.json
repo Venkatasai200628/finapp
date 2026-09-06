@@ -10,7 +10,10 @@
     "backgroundColor": "#0B0F14",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.venkatasai.fin"
+      "bundleIdentifier": "com.venkatasai.fin",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.venkatasai.fin",

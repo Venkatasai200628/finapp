@@ -21,11 +21,9 @@ export default function HomeScreen() {
   const { realtimeDetectionEnabled, liveFeed } = useSettings();
   const { isDesktop } = useResponsive();
   const topAlerts = alerts.slice(0, 2);
-  const totalBalance = monthlySummary.income - monthlySummary.expense + 84200;
-
+  const totalBalance = monthlySummary.income - monthlySummary.expense;
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
-      <ScreenGlow />
       <ScrollView
         contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
