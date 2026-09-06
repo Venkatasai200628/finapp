@@ -18,9 +18,9 @@ import { useSettings } from '../../context/SettingsContext';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
 
 export default function HomeScreen() {
-  const { realtimeDetectionEnabled, liveFeed } = useSettings();
+  const { realtimeDetectionEnabled, liveFeed, liveAlerts } = useSettings();
   const { isDesktop } = useResponsive();
-  const topAlerts = alerts.slice(0, 2);
+  const topAlerts = liveAlerts.slice(0, 2);
   const totalBalance = monthlySummary.income - monthlySummary.expense;
   return (
     <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
@@ -123,7 +123,14 @@ export default function HomeScreen() {
           <Text style={typography.h2}>Recent alerts</Text>
         </View>
         {topAlerts.map((a, i) => (
-          <AlertCard key={a.id} alert={a} delay={i * 60} onPress={() => router.push(`/alert/${a.id}`)} />
+          <AlertCard key={a.id} alert={{
+            id: a.id,
+            severity: a.severity,
+            title: 'Unusual transaction detected',
+            detail: `${a.merchant} - ${a.reasons[0]}`,
+            time: new Date(a.timestamp).toLocaleTimeString(),
+            source: 'transaction'
+          }} delay={i * 60} onPress={() => router.push(`/alert/${a.id}`)} />
         ))}
       </ScrollView>
     </SafeAreaView>

@@ -22,17 +22,20 @@ function txParams(tx: Transaction) {
 
 const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Uncategorized'];
 
+import { useSettings } from '../context/SettingsContext';
+
 export default function TransactionsScreen() {
+  const { liveFeed } = useSettings();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
   const filtered = useMemo(() => {
-    return allTransactions.filter((tx) => {
+    return liveFeed.filter((tx) => {
       const matchesCategory = category === 'All' || tx.category === category;
       const matchesQuery = tx.merchant.toLowerCase().includes(query.trim().toLowerCase());
       return matchesCategory && matchesQuery;
     });
-  }, [query, category]);
+  }, [query, category, liveFeed]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -75,9 +78,18 @@ export default function TransactionsScreen() {
             {filtered.map((tx, i) => (
               <TransactionRow
                 key={tx.id}
-                tx={tx}
+                tx={{
+                  id: tx.id,
+                  merchant: tx.merchant,
+                  category: tx.category,
+                  amount: tx.amount,
+                  time: new Date(tx.timestamp).toLocaleString(),
+                  flagged: tx.severity === 'danger'
+                }}
                 delay={Math.min(i, 8) * 30}
-                onPress={() => router.push({ pathname: '/transaction/[id]', params: txParams(tx) })}
+                onPress={() => router.push({ pathname: '/transaction/[id]', params: {
+                  id: tx.id, merchant: tx.merchant, category: tx.category, amount: String(tx.amount), time: new Date(tx.timestamp).toLocaleString(), flagged: tx.severity === 'danger' ? '1' : '0'
+                } })}
               />
             ))}
           </Card>
