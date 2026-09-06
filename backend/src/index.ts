@@ -13,7 +13,7 @@ import { isConfigured as aaConfigured } from './aa/setu';
 
 const PORT = Number(process.env.PORT) || 4000;
 const SIMULATOR_INTERVAL_MS = Number(process.env.SIMULATOR_INTERVAL_MS) || 8000;
-const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED !== 'false';
+const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === 'true';
 
 const app = express();
 const httpServer = createServer(app);

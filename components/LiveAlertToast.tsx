@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { SlideInUp, SlideOutUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { fontFamily, colors, radius, shadow, spacing } from '../constants/theme';
 import { useSettings } from '../context/SettingsContext';
 
@@ -23,8 +23,8 @@ export default function LiveAlertToast() {
 
   return (
     <Animated.View
-      entering={SlideInUp.duration(300)}
-      exiting={SlideOutUp.duration(250)}
+      entering={FadeInDown.duration(300)}
+      exiting={FadeOutUp.duration(250)}
       style={[styles.wrap, { top: insets.top + spacing.sm }, shadow.floating]}
     >
       <View style={styles.iconWrap}>
