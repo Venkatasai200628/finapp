@@ -9,10 +9,11 @@
     "scheme": "finapp",
     "backgroundColor": "#0B0F14",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.venkatasai.fin"
     },
     "android": {
-      "package": "com.karnatipraveen.fin",
+      "package": "com.venkatasai.fin",
       "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#05090c",
