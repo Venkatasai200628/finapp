@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import Card from '../components/Card';
 import DetailHeader from '../components/DetailHeader';
 import Screen from '../components/Screen';
@@ -138,9 +139,8 @@ export default function ImportStatementScreen() {
       // If backend is configured, send the file there to decrypt + parse
       // (because React Native lacks the crypto keys to crack modern Excel files).
       if (BACKEND_URL && token && fileAsset) {
-        const fd = new FormData();
-        
         if (Platform.OS === 'web') {
+          const fd = new FormData();
           const file = (fileAsset as any).file;
           if (file) {
             fd.append('file', file);
@@ -148,28 +148,36 @@ export default function ImportStatementScreen() {
             const blob = new Blob([fileBytes as any], { type: 'application/octet-stream' });
             fd.append('file', blob, fileName || 'statement.xlsx');
           }
+          if (pwd) fd.append('password', pwd);
+
+          const res = await fetch(`${BACKEND_URL}/api/parse-statement`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd,
+          });
+          
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || `Server error: ${res.status}`);
+          }
+          parsed = await res.json();
         } else {
-          // Native platforms (iOS/Android) use { uri, name, type } for FormData files
-          fd.append('file', {
-            uri: fileAsset.uri,
-            name: fileName || 'statement.xlsx',
-            type: fileAsset.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          } as any);
-        }
+          // Native platforms (iOS/Android): use expo-file-system to completely bypass React Native's
+          // broken fetch FormData polyfills
+          const uploadResult = await FileSystem.uploadAsync(`${BACKEND_URL}/api/parse-statement`, fileAsset.uri, {
+             httpMethod: 'POST',
+             uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+             fieldName: 'file',
+             headers: { Authorization: `Bearer ${token}` },
+             parameters: pwd ? { password: pwd } : {},
+          });
 
-        if (pwd) fd.append('password', pwd);
-
-        const res = await fetch(`${BACKEND_URL}/api/parse-statement`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd,
-        });
-        
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Server error: ${res.status}`);
+          if (uploadResult.status !== 200) {
+            const data = JSON.parse(uploadResult.body);
+            throw new Error(data.error || `Server error: ${uploadResult.status}`);
+          }
+          parsed = JSON.parse(uploadResult.body);
         }
-        parsed = await res.json();
       } else {
         // Fallback: try parsing locally (only works for non-encrypted files)
         parsed = parseExcelStatement(fileBytes, pwd || undefined);
