@@ -5,6 +5,7 @@ import Card from '../../components/Card';
 import Screen from '../../components/Screen';
 import SectionHeader from '../../components/SectionHeader';
 import { adviseGstReduction, computeGstLine, computeGstSummary, type GstItem } from '../../lib/gstCalculator';
+import { useResponsive } from '../../hooks/useResponsive';
 import { colors, fontFamily, radius, rupee, spacing } from '../../constants/theme';
 
 function money(n: number) {
@@ -17,6 +18,7 @@ function parseNum(v: string) {
 }
 
 export default function GstScreen() {
+  const { twoCol } = useResponsive();
   const [qty, setQty] = useState('1');
   const [price, setPrice] = useState('');
   const [rate, setRate] = useState(18);
@@ -56,15 +58,10 @@ export default function GstScreen() {
     setQty('1');
   };
 
-  return (
-    <Screen>
-      <SectionHeader
-        kicker="Tax"
-        title="GST"
-        subtitle="Type an amount, add it to the bill, then enter the next line."
-      />
-
+  const calculator = (
+    <View style={twoCol ? styles.col : undefined}>
       <View style={styles.display}>
+        <Text style={styles.displayKicker}>Line preview</Text>
         <View style={styles.displayRow}>
           <Text style={styles.displayLabel}>Before GST</Text>
           <Text style={styles.displayValue}>{preview ? money(preview.baseAmount) : '₹0.00'}</Text>
@@ -135,7 +132,11 @@ export default function GstScreen() {
           <Text style={styles.addBtnText}>Add to bill</Text>
         </Pressable>
       </Card>
+    </View>
+  );
 
+  const billPanel = (
+    <View style={twoCol ? styles.col : undefined}>
       <View style={styles.billHead}>
         <Text style={styles.billTitle}>Bill</Text>
         {bill.length > 0 && (
@@ -218,11 +219,27 @@ export default function GstScreen() {
             ))}
         </Card>
       )}
+    </View>
+  );
+
+  return (
+    <Screen>
+      <SectionHeader
+        kicker="Tax"
+        title="GST"
+        subtitle="Type an amount, add it to the bill, then enter the next line."
+      />
+      <View style={twoCol ? styles.split : undefined}>
+        {calculator}
+        {billPanel}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  split: { flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' },
+  col: { flex: 1, minWidth: 0 },
   display: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radius.xl,
@@ -230,6 +247,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  displayKicker: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    color: colors.accent,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 12,
   },
   displayRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   displayLabel: { fontSize: 13, color: colors.textMuted, fontFamily: fontFamily.medium },
@@ -242,7 +267,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   displayTotalLabel: { fontSize: 14, fontFamily: fontFamily.semiBold, color: colors.textSecondary },
-  displayTotalValue: { fontSize: 26, fontFamily: fontFamily.extraBold, color: colors.accent, letterSpacing: -0.6 },
+  displayTotalValue: { fontSize: 28, fontFamily: fontFamily.extraBold, color: colors.accent, letterSpacing: -0.7 },
   pad: { marginBottom: spacing.lg },
   field: { fontSize: 11, color: colors.textMuted, marginBottom: 6, marginTop: spacing.sm, letterSpacing: 0.4 },
   row: { flexDirection: 'row', gap: spacing.sm },

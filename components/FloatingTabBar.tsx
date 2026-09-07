@@ -10,11 +10,11 @@ import { SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
 
 const HIDDEN = new Set(['finance', 'insights']);
 
-const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  index: 'home',
-  books: 'book',
-  gst: 'calculator',
-  settings: 'settings-sharp',
+const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
+  index: { on: 'home', off: 'home-outline' },
+  books: { on: 'book', off: 'book-outline' },
+  gst: { on: 'calculator', off: 'calculator-outline' },
+  settings: { on: 'settings', off: 'settings-outline' },
 };
 
 const LABELS: Record<string, string> = {
@@ -50,7 +50,7 @@ function press(navigation: BottomTabBarProps['navigation'], route: { key: string
 function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
   const routes = visibleRoutes(state);
-  const itemHeight = 48;
+  const itemHeight = 50;
   const focusedIndex = Math.max(
     0,
     routes.findIndex((route) => route.key === state.routes[state.index]?.key)
@@ -69,22 +69,31 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
     <View style={[sidebarStyles.wrap, { paddingTop: insets.top + spacing.xl }]}>
       <View style={sidebarStyles.brandRow}>
         <View style={sidebarStyles.brandMark}>
-          <Ionicons name="sparkles" size={15} color={ON_ACCENT} />
+          <Ionicons name="flash" size={16} color={ON_ACCENT} />
         </View>
-        <Text style={sidebarStyles.brandText}>Fin</Text>
+        <View>
+          <Text style={sidebarStyles.brandText}>Fin</Text>
+          <Text style={sidebarStyles.brandSub}>Cash · Books · GST</Text>
+        </View>
       </View>
 
+      <Text style={sidebarStyles.section}>Workspace</Text>
       <View style={sidebarStyles.navList}>
-        <Animated.View style={[sidebarStyles.indicator, { height: itemHeight - 6 }, indicatorStyle]} />
+        <Animated.View style={[sidebarStyles.indicator, { height: itemHeight - 8 }, indicatorStyle]} />
         {routes.map((route) => {
           const focused = route.key === state.routes[state.index]?.key;
+          const icons = ICONS[route.name] ?? { on: 'ellipse', off: 'ellipse-outline' };
           return (
             <Pressable
               key={route.key}
               onPress={() => press(navigation, route, focused)}
               style={[sidebarStyles.item, { height: itemHeight }]}
             >
-              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={18} color={focused ? ON_ACCENT : colors.textMuted} />
+              <Ionicons
+                name={focused ? icons.on : icons.off}
+                size={18}
+                color={focused ? ON_ACCENT : colors.textMuted}
+              />
               <Text style={[sidebarStyles.itemLabel, focused && sidebarStyles.itemLabelActive]}>
                 {LABELS[route.name] ?? route.name}
               </Text>
@@ -94,7 +103,7 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
       </View>
 
       <View style={sidebarStyles.footer}>
-        <Text style={sidebarStyles.footerText}>Books · GST · cash flow{'\n'}from your statement only</Text>
+        <Text style={sidebarStyles.footerText}>Statement-backed numbers.{'\n'}Nothing is invented for you.</Text>
       </View>
     </View>
   );
@@ -103,7 +112,7 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
 function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
   const routes = visibleRoutes(state);
-  const barWidth = 348;
+  const barWidth = 352;
   const tabWidth = barWidth / Math.max(routes.length, 1);
   const focusedIndex = Math.max(
     0,
@@ -122,20 +131,25 @@ function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' 
   return (
     <View style={[pillStyles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} pointerEvents="box-none">
       <View style={[pillStyles.bar, { width: barWidth }, shadow.floating]}>
-        <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
+        <BlurView intensity={48} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
         <View style={[StyleSheet.absoluteFill, { borderRadius: radius.xl, overflow: 'hidden' }]}>
           <View style={pillStyles.tint} />
         </View>
         <Animated.View style={[pillStyles.indicator, { width: tabWidth - 8 }, indicatorStyle]} />
         {routes.map((route) => {
           const focused = route.key === state.routes[state.index]?.key;
+          const icons = ICONS[route.name] ?? { on: 'ellipse', off: 'ellipse-outline' };
           return (
             <Pressable
               key={route.key}
               onPress={() => press(navigation, route, focused)}
               style={[pillStyles.tab, { width: tabWidth }]}
             >
-              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={18} color={focused ? ON_ACCENT : colors.textMuted} />
+              <Ionicons
+                name={focused ? icons.on : icons.off}
+                size={18}
+                color={focused ? ON_ACCENT : colors.textMuted}
+              />
               {focused && <Text style={pillStyles.label}>{LABELS[route.name] ?? route.name}</Text>}
             </Pressable>
           );
@@ -168,9 +182,9 @@ const sidebarStyles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   brandMark: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
@@ -179,7 +193,22 @@ const sidebarStyles = StyleSheet.create({
     fontSize: 18,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
+  },
+  brandSub: {
+    fontSize: 10,
+    fontFamily: fontFamily.medium,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  section: {
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
+    color: colors.textMuted,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    paddingHorizontal: spacing.sm,
+    marginBottom: 8,
   },
   navList: {
     position: 'relative',
@@ -188,7 +217,7 @@ const sidebarStyles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 3,
+    top: 4,
     backgroundColor: colors.accent,
     borderRadius: radius.sm,
   },
@@ -196,7 +225,7 @@ const sidebarStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   itemLabel: {
     fontSize: 14,
@@ -210,11 +239,14 @@ const sidebarStyles = StyleSheet.create({
   footer: {
     marginTop: 'auto',
     paddingHorizontal: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
   },
   footerText: {
     fontSize: 11,
     color: colors.textMuted,
-    lineHeight: 15,
+    lineHeight: 16,
   },
 });
 
@@ -237,7 +269,7 @@ const pillStyles = StyleSheet.create({
   },
   tint: {
     flex: 1,
-    backgroundColor: 'rgba(14, 19, 28, 0.82)',
+    backgroundColor: 'rgba(10, 15, 22, 0.88)',
   },
   indicator: {
     position: 'absolute',
@@ -252,7 +284,7 @@ const pillStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   label: {
     fontSize: 12,

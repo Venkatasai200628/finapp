@@ -36,24 +36,24 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSoft,
   },
   rowPressed: {
-    opacity: 0.65,
+    opacity: 0.7,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   avatarIn: { backgroundColor: colors.income + '22' },
   avatarOut: { backgroundColor: colors.expense + '18' },
-  avatarText: { fontFamily: fontFamily.bold, fontSize: 13 },
+  avatarText: { fontFamily: fontFamily.bold, fontSize: 14 },
   merchant: {
     fontSize: 14,
     fontFamily: fontFamily.semiBold,
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 12,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   amount: {
     fontSize: 14,
@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
     color: colors.income,
   },
   expense: {
-    color: colors.textPrimary,
+    color: colors.expense,
   },
 });

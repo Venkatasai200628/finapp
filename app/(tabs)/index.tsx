@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { useWindowDimensions, View, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Card from '../../components/Card';
 import CategoryDonut from '../../components/CategoryDonut';
+import ChartCard from '../../components/ChartCard';
 import EmptyState from '../../components/EmptyState';
 import ForecastChart from '../../components/ForecastChart';
 import MonthlyTrendChart from '../../components/MonthlyTrendChart';
@@ -18,12 +19,15 @@ import {
   predictCashFlow,
 } from '../../lib/financeAnalytics';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { colors, fontFamily, gradients, radius, rupee, spacing } from '../../constants/theme';
 
 export default function HomeScreen() {
   const { imported } = useImportedTransactions();
-  const { width } = useWindowDimensions();
-  const chartWidth = Math.min(width - 64, 780);
+  const { twoCol, contentWidth } = useResponsive();
+  const inner = Math.max(220, contentWidth - 32);
+  const chartWidth = inner;
+  const halfWidth = Math.max(200, twoCol ? (contentWidth - 16) / 2 - 32 : inner);
 
   const points = useMemo(
     () => imported.map((tx) => ({ amount: tx.amount, timestamp: tx.timestamp, category: tx.category })),
@@ -35,6 +39,7 @@ export default function HomeScreen() {
   const categories = useMemo(() => computeCategorySpend(points), [points]);
   const trend = useMemo(() => computeMonthlyTrend(points), [points]);
   const hasData = imported.length > 0;
+  const rate = Math.max(0, Math.min(100, monthly?.savingsRate ?? 0));
 
   const rows = imported.slice(0, 6).map((tx) => ({
     id: tx.id,
@@ -48,17 +53,17 @@ export default function HomeScreen() {
   return (
     <Screen>
       <SectionHeader
-        kicker="Overview"
+        kicker="Dashboard"
         title="Home"
-        subtitle="Cash position, charts and recent activity from your uploaded statement."
+        subtitle="Net position, cash-flow plots and recent activity — all from your statement."
       />
 
       {!hasData ? (
         <Card elevated>
           <EmptyState
-            icon="cloud-upload-outline"
-            title="Your dashboard is waiting"
-            body="Upload a bank CSV from Books. Income, spend, plots and the 30-day outlook all come from that file."
+            icon="analytics-outline"
+            title="Charts appear after a statement"
+            body="Upload a bank CSV from Books. Income, spend, the donut, bars and 30-day outlook all come from that file."
             actionLabel="Upload statement"
             onAction={() => router.push('/import-statement')}
           />
@@ -66,11 +71,18 @@ export default function HomeScreen() {
       ) : (
         <>
           <LinearGradient colors={[...gradients.hero]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-            <Text style={styles.heroKicker}>This month · net</Text>
-            <Text style={styles.heroAmount}>{rupee(Math.round(monthly?.savings ?? 0))}</Text>
-            <Text style={styles.heroMeta}>
-              {monthly ? `${monthly.savingsRate}% of income kept` : 'Add more dated rows for a rate'}
-            </Text>
+            <View style={styles.heroTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroKicker}>This month · net</Text>
+                <Text style={styles.heroAmount}>{rupee(Math.round(monthly?.savings ?? 0))}</Text>
+                <Text style={styles.heroMeta}>
+                  {monthly ? `${monthly.savingsRate}% of income kept as savings` : 'Add dated rows for a savings rate'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.rateTrack}>
+              <View style={[styles.rateFill, { width: `${rate}%` }]} />
+            </View>
             {forecast.isReal ? (
               <View style={styles.heroChip}>
                 <Text style={styles.heroChipText}>
@@ -107,9 +119,11 @@ export default function HomeScreen() {
             />
           </View>
 
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Cash flow</Text>
-            <Text style={styles.cardHint}>Solid line is history. Dashed gold is the projected path.</Text>
+          <ChartCard
+            title="Cash flow"
+            hint="Solid mint is history. Dashed gold is the projected path."
+            style={styles.card}
+          >
             {forecast.isReal && forecast.history.length > 1 ? (
               <>
                 <ForecastChart history={forecast.history} forecast={forecast.forecast} width={chartWidth} />
@@ -122,19 +136,24 @@ export default function HomeScreen() {
             ) : (
               <Text style={styles.muted}>Need a few dated rows before a forecast plot can be drawn.</Text>
             )}
-          </Card>
+          </ChartCard>
 
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Income vs spend</Text>
-            <Text style={styles.cardHint}>Month-by-month from the statement dates.</Text>
-            <MonthlyTrendChart data={trend} width={chartWidth} />
-          </Card>
-
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Where money went</Text>
-            <Text style={styles.cardHint}>Category mix for this statement.</Text>
-            <CategoryDonut data={categories} />
-          </Card>
+          <View style={[styles.plotRow, twoCol && styles.plotRowWide]}>
+            <ChartCard
+              title="Income vs spend"
+              hint="Month-by-month from statement dates."
+              style={[styles.plotCard, twoCol && styles.plotCardWide]}
+            >
+              <MonthlyTrendChart data={trend} width={halfWidth} />
+            </ChartCard>
+            <ChartCard
+              title="Where money went"
+              hint="Category mix for this statement."
+              style={[styles.plotCard, twoCol && styles.plotCardWide]}
+            >
+              <CategoryDonut data={categories} size={twoCol ? 148 : 160} />
+            </ChartCard>
+          </View>
 
           <SectionHeader title="Recent" action="See all" onAction={() => router.push('/transactions')} />
           <Card style={styles.txCard}>
@@ -172,18 +191,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start' },
   heroKicker: {
     fontSize: 11,
     fontFamily: fontFamily.bold,
     color: colors.accent,
-    letterSpacing: 1.4,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   heroAmount: {
-    fontSize: 40,
+    fontSize: 42,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -1.2,
+    letterSpacing: -1.4,
     marginTop: 8,
   },
   heroMeta: {
@@ -191,12 +211,24 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 6,
   },
+  rateTrack: {
+    height: 6,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  rateFill: {
+    height: 6,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+  },
   heroChip: {
     alignSelf: 'flex-start',
     marginTop: spacing.md,
-    backgroundColor: 'rgba(61,220,151,0.14)',
+    backgroundColor: 'rgba(45,212,168,0.16)',
     borderRadius: radius.pill,
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 12,
   },
   heroChipText: {
@@ -206,10 +238,12 @@ const styles = StyleSheet.create({
   },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   card: { marginBottom: spacing.lg },
-  cardTitle: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
-  cardHint: { fontSize: 12, color: colors.textMuted, marginTop: 4, marginBottom: spacing.md },
-  warn: { fontSize: 13, color: colors.warn, marginTop: 8 },
-  ok: { fontSize: 13, color: colors.income, marginTop: 8 },
+  plotRow: { gap: spacing.lg, marginBottom: spacing.lg },
+  plotRowWide: { flexDirection: 'row', alignItems: 'stretch' },
+  plotCard: { marginBottom: 0 },
+  plotCardWide: { flex: 1 },
+  warn: { fontSize: 13, color: colors.warn, marginTop: 10 },
+  ok: { fontSize: 13, color: colors.income, marginTop: 10 },
   muted: { fontSize: 13, color: colors.textMuted },
   txCard: { paddingVertical: 4, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
 });

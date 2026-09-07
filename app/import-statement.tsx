@@ -63,18 +63,22 @@ export default function ImportStatementScreen() {
     <Screen>
       <DetailHeader title="Upload statement" />
 
-      <Card>
-        <Text style={styles.h3}>Choose a CSV file</Text>
-        <Text style={styles.note}>
-          From net banking: Account statement → Download CSV. We read Date, Narration, Debit and Credit columns.
-        </Text>
-        <Pressable style={styles.uploadBtn} onPress={pickFile} disabled={busy}>
-          <Ionicons name="document-attach-outline" size={20} color={colors.onAccent} />
-          <Text style={styles.uploadBtnText}>{busy ? 'Reading…' : 'Select file'}</Text>
-        </Pressable>
-        {fileName ? <Text style={styles.fileName}>{fileName}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </Card>
+      <Pressable onPress={pickFile} disabled={busy}>
+        <Card elevated style={styles.drop}>
+          <View style={styles.dropIcon}>
+            <Ionicons name="document-attach-outline" size={26} color={colors.accent} />
+          </View>
+          <Text style={styles.h3}>{busy ? 'Reading…' : 'Choose a CSV file'}</Text>
+          <Text style={styles.note}>
+            From net banking: Account statement → Download CSV. We read Date, Narration, Debit and Credit columns.
+          </Text>
+          <View style={styles.uploadBtn}>
+            <Text style={styles.uploadBtnText}>Select file</Text>
+          </View>
+          {fileName ? <Text style={styles.fileName}>{fileName}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </Card>
+      </Pressable>
 
       {result && result.rows.length > 0 && (
         <Card style={{ marginTop: spacing.lg }}>
@@ -107,21 +111,28 @@ export default function ImportStatementScreen() {
 }
 
 const styles = StyleSheet.create({
-  h3: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
-  note: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 19 },
-  uploadBtn: {
-    marginTop: spacing.lg,
-    flexDirection: 'row',
+  drop: { alignItems: 'center', paddingVertical: spacing.xxl },
+  dropIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: colors.accent + '18',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    paddingVertical: 14,
-    borderRadius: radius.md,
+    marginBottom: spacing.md,
   },
-  uploadBtnText: { fontSize: 15, fontFamily: fontFamily.bold, color: colors.onAccent },
+  h3: { fontSize: 16, fontFamily: fontFamily.semiBold, color: colors.textPrimary, textAlign: 'center' },
+  note: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 19, textAlign: 'center' },
+  uploadBtn: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: radius.pill,
+  },
+  uploadBtnText: { fontSize: 14, fontFamily: fontFamily.bold, color: colors.onAccent },
   fileName: { marginTop: spacing.sm, fontSize: 12, color: colors.textMuted },
-  error: { marginTop: spacing.sm, fontSize: 13, color: colors.danger },
+  error: { marginTop: spacing.sm, fontSize: 13, color: colors.danger, textAlign: 'center' },
   previewMeta: { fontSize: 12, color: colors.textMuted, marginTop: 6, marginBottom: spacing.sm },
   previewRow: {
     flexDirection: 'row',

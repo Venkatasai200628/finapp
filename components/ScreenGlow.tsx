@@ -7,14 +7,14 @@ export default function ScreenGlow() {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient
         colors={[colors.glow1, 'transparent']}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.7, y: 0.55 }}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.75, y: 0.6 }}
         style={styles.topLeft}
       />
       <LinearGradient
         colors={[colors.glow2, 'transparent']}
-        start={{ x: 1, y: 0.1 }}
-        end={{ x: 0.3, y: 0.7 }}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.25, y: 0.75 }}
         style={styles.topRight}
       />
     </View>
@@ -24,18 +24,18 @@ export default function ScreenGlow() {
 const styles = StyleSheet.create({
   topLeft: {
     position: 'absolute',
-    top: -40,
-    left: -40,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
+    top: -80,
+    left: -60,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
   },
   topRight: {
     position: 'absolute',
-    top: 80,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
+    top: 40,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
   },
 });

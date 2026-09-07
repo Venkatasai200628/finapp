@@ -31,21 +31,21 @@ export default function SectionHeader({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: spacing.lg },
+  wrap: { marginBottom: spacing.xl },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: spacing.md,
-    marginTop: 4,
+    marginTop: 6,
   },
   title: {
     flex: 1,
-    fontSize: 22,
+    fontSize: 28,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
-  subtitle: { ...typography.body, marginTop: 6, fontSize: 13 },
+  subtitle: { ...typography.body, marginTop: 8, fontSize: 13, maxWidth: 520 },
   action: { fontSize: 13, fontFamily: fontFamily.semiBold, color: colors.accent },
 });

@@ -133,6 +133,11 @@ const styles = StyleSheet.create({
   heroWrap: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconCircle: {
     width: 56,

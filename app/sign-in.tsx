@@ -30,13 +30,13 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <LinearGradient colors={['#07090E', '#0C1814', '#07090E']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#05070B', '#0A1814', '#05070B']} style={StyleSheet.absoluteFill} />
       <ScreenGlow />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
             <View style={styles.brandMark}>
-              <Ionicons name="sparkles" size={22} color={colors.onAccent} />
+              <Ionicons name="flash" size={22} color={colors.onAccent} />
             </View>
             <Text style={styles.brandName}>Fin</Text>
             <Text style={styles.tagline}>Books, cash-flow plots and GST — empty until you add a statement.</Text>
@@ -115,27 +115,27 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxl,
     flexGrow: 1,
     justifyContent: 'center',
-    maxWidth: 460,
+    maxWidth: 440,
     width: '100%',
     alignSelf: 'center',
   },
   brand: { alignItems: 'center', marginBottom: spacing.xl },
   brandMark: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   brandName: {
-    fontSize: 34,
+    fontSize: 36,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -1,
+    letterSpacing: -1.2,
   },
-  tagline: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+  tagline: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20, maxWidth: 280 },
   cardTitle: { fontSize: 18, fontFamily: fontFamily.bold, color: colors.textPrimary, marginBottom: spacing.lg },
   label: {
     fontSize: 11,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    height: 48,
+    height: 50,
     color: colors.textPrimary,
     fontSize: 14,
     marginBottom: spacing.lg,

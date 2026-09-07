@@ -23,21 +23,24 @@ export default function StatCard({
   const isUp = changePct >= 0;
   return (
     <View style={styles.card}>
-      <View style={[styles.iconWrap, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon} size={16} color={color} />
+      <View style={[styles.accent, { backgroundColor: color }]} />
+      <View style={styles.top}>
+        <View style={[styles.iconWrap, { backgroundColor: color + '24' }]}>
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
+        {showChange ? (
+          <View style={[styles.chip, { backgroundColor: (isUp ? colors.income : colors.expense) + '22' }]}>
+            <Text style={[styles.chipText, { color: isUp ? colors.income : colors.expense }]}>
+              {isUp ? '+' : '−'}
+              {Math.abs(changePct)}%
+            </Text>
+          </View>
+        ) : null}
       </View>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.amount} numberOfLines={1}>
         {rupee(Math.round(amount))}
       </Text>
-      {showChange ? (
-        <Text style={[styles.trendText, { color: isUp ? colors.income : colors.expense }]}>
-          {isUp ? '+' : '−'}
-          {Math.abs(changePct)}% vs last
-        </Text>
-      ) : (
-        <Text style={styles.hint}>From your books</Text>
-      )}
     </View>
   );
 }
@@ -50,38 +53,51 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
+    paddingTop: spacing.md + 3,
     minWidth: 0,
+    overflow: 'hidden',
+  },
+  accent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+  },
+  top: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   iconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+  },
+  chip: {
+    borderRadius: radius.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  chipText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
   },
   label: {
     fontSize: 11,
     fontFamily: fontFamily.semiBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
   },
   amount: {
-    fontSize: 15,
-    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     marginTop: 4,
-  },
-  trendText: {
-    fontSize: 10,
-    fontFamily: fontFamily.semiBold,
-    marginTop: 6,
-  },
-  hint: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 6,
   },
 });

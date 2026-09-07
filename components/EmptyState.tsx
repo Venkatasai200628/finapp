@@ -18,7 +18,7 @@ export default function EmptyState({
   return (
     <View style={styles.wrap}>
       <View style={styles.icon}>
-        <Ionicons name={icon} size={26} color={colors.accent} />
+        <Ionicons name={icon} size={28} color={colors.accent} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body}>{body}</Text>
@@ -34,14 +34,14 @@ export default function EmptyState({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    paddingVertical: 36,
     paddingHorizontal: spacing.md,
   },
   icon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: colors.accent + '18',
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: colors.accent + '16',
     borderWidth: 1,
     borderColor: colors.accent + '33',
     alignItems: 'center',
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     fontFamily: fontFamily.semiBold,
     color: colors.textPrimary,
     textAlign: 'center',
@@ -59,14 +59,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
-    lineHeight: 19,
-    maxWidth: 280,
+    lineHeight: 20,
+    maxWidth: 300,
   },
   btn: {
     marginTop: spacing.lg,
     backgroundColor: colors.accent,
     paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     borderRadius: radius.pill,
   },
   btnText: {
