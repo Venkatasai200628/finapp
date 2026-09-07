@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from '../components/Card';
 import DetailHeader from '../components/DetailHeader';
-import ScreenGlow from '../components/ScreenGlow';
+
 import { parseTransactionSms } from '../lib/smsParser';
 import { handleIncomingSms, isSmsCaptureSupported, startSmsCapture, SmsStatus } from '../lib/smsListener';
 import { useAuth } from '../context/AuthContext';
@@ -62,7 +62,7 @@ export default function SmsTestScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenGlow />
+
       <DetailHeader title="SMS detection" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Animated.View entering={FadeInDown.duration(400)}>

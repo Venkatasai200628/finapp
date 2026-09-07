@@ -7,7 +7,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import AnimatedNumber from '../../components/AnimatedNumber';
-import ScreenGlow from '../../components/ScreenGlow';
+
 import { useGoals } from '../../context/GoalsContext';
 import { fontFamily, colors, radius, spacing, typography } from '../../constants/theme';
 
@@ -22,7 +22,7 @@ export default function GoalDetailScreen() {
   if (!goal) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenGlow />
+
         <DetailHeader title="Goal" />
         <View style={styles.notFound}>
           <Text style={styles.notFoundText}>This goal is no longer available.</Text>
@@ -43,7 +43,7 @@ export default function GoalDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenGlow />
+
       <DetailHeader title={goal.name} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.heroWrap}>

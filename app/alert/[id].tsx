@@ -7,7 +7,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import SeverityBadge from '../../components/SeverityBadge';
-import ScreenGlow from '../../components/ScreenGlow';
 import { alerts } from '../../data/mockData';
 import { fontFamily, colors, radius, spacing, typography } from '../../constants/theme';
 
@@ -40,7 +39,7 @@ export default function AlertDetailScreen() {
   if (!alert) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScreenGlow />
+
         <DetailHeader title="Alert" />
         <View style={styles.notFound}>
           <Text style={styles.notFoundText}>This alert is no longer available.</Text>
@@ -53,7 +52,7 @@ export default function AlertDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenGlow />
+
       <DetailHeader title="Alert Details" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)}>
