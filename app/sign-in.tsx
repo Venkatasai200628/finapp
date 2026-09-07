@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Card from '../components/Card';
-import ScreenGlow from '../components/ScreenGlow';
 import { useAuth } from '../context/AuthContext';
 import { colors, fontFamily, radius, spacing } from '../constants/theme';
 
@@ -30,8 +28,6 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <LinearGradient colors={['#05070B', '#0A1814', '#05070B']} style={StyleSheet.absoluteFill} />
-      <ScreenGlow />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
@@ -39,7 +35,7 @@ export default function SignInScreen() {
               <Ionicons name="flash" size={22} color={colors.onAccent} />
             </View>
             <Text style={styles.brandName}>Fin</Text>
-            <Text style={styles.tagline}>Books, cash-flow plots and GST — empty until you add a statement.</Text>
+            <Text style={styles.tagline}>Track your money, books and GST.</Text>
           </View>
 
           <Card elevated>

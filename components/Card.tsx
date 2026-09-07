@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewProps } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 
 type Props = ViewProps & {
@@ -11,13 +10,6 @@ type Props = ViewProps & {
 export default function Card({ style, children, elevated, ...props }: Props) {
   return (
     <View style={[styles.wrap, elevated && styles.elevated, style]} {...props}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(255,255,255,0.07)', 'rgba(255,255,255,0)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.45 }}
-        style={StyleSheet.absoluteFill}
-      />
       {children}
     </View>
   );

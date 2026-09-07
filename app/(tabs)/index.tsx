@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import Card from '../../components/Card';
 import CategoryDonut from '../../components/CategoryDonut';
 import ChartCard from '../../components/ChartCard';
@@ -20,7 +19,7 @@ import {
 } from '../../lib/financeAnalytics';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
 import { useResponsive } from '../../hooks/useResponsive';
-import { colors, fontFamily, gradients, radius, rupee, spacing } from '../../constants/theme';
+import { colors, fontFamily, radius, rupee, spacing } from '../../constants/theme';
 
 export default function HomeScreen() {
   const { imported } = useImportedTransactions();
@@ -70,7 +69,7 @@ export default function HomeScreen() {
         </Card>
       ) : (
         <>
-          <LinearGradient colors={[...gradients.hero]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <Card elevated style={styles.hero}>
             <View style={styles.heroTop}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.heroKicker}>This month · net</Text>
@@ -90,7 +89,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : null}
-          </LinearGradient>
+          </Card>
 
           <View style={styles.statsRow}>
             <StatCard
@@ -121,7 +120,7 @@ export default function HomeScreen() {
 
           <ChartCard
             title="Cash flow"
-            hint="Solid mint is history. Dashed gold is the projected path."
+            hint="Solid orange is history. Dashed gold is the projected path."
             style={styles.card}
           >
             {forecast.isReal && forecast.history.length > 1 ? (
@@ -188,8 +187,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.xl,
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start' },
   heroKicker: {
@@ -226,7 +223,7 @@ const styles = StyleSheet.create({
   heroChip: {
     alignSelf: 'flex-start',
     marginTop: spacing.md,
-    backgroundColor: 'rgba(45,212,168,0.16)',
+    backgroundColor: colors.accent + '28',
     borderRadius: radius.pill,
     paddingVertical: 7,
     paddingHorizontal: 12,

@@ -10,7 +10,7 @@ export default function CategoryDonut({ data, size = 168 }: { data: CategorySpen
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const inner = radius - strokeWidth / 2 - 6;
-  const gap = 3;
+  const gap = 4;
 
   if (total <= 0) {
     return <Text style={styles.empty}>No spend to chart yet.</Text>;

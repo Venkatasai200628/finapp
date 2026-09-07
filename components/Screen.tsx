@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenGlow from './ScreenGlow';
 import { colors, spacing } from '../constants/theme';
 import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
 
@@ -25,7 +24,6 @@ export default function Screen({ children, scroll = true, contentStyle }: Props)
 
   return (
     <View style={[styles.root, isDesktop && { paddingLeft: SIDEBAR_WIDTH }]}>
-      <ScreenGlow />
       {scroll ? (
         <ScrollView
           contentContainerStyle={[pad, contentStyle]}

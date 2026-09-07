@@ -6,12 +6,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
-  Lexend_400Regular,
-  Lexend_500Medium,
-  Lexend_600SemiBold,
-  Lexend_700Bold,
-  Lexend_800ExtraBold,
-} from '@expo-google-fonts/lexend';
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+  Outfit_800ExtraBold,
+} from '@expo-google-fonts/outfit';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
@@ -22,10 +22,6 @@ import { colors, fontFamily } from '../constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Give every <Text>/<TextInput> in the app the Arctic Mono default face,
-// so components don't each need an explicit fontFamily for body text.
-// Bold weights still need to reference fontFamily.bold/semiBold directly —
-// see the note in constants/theme.ts.
 type TextWithDefaults = typeof Text & { defaultProps?: { style?: unknown } };
 type TextInputWithDefaults = typeof TextInput & { defaultProps?: { style?: unknown } };
 
@@ -72,11 +68,11 @@ function AuthGate() {
 export default function RootLayout() {
   const [fontsApplied, setFontsApplied] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
-    Lexend_400Regular,
-    Lexend_500Medium,
-    Lexend_600SemiBold,
-    Lexend_700Bold,
-    Lexend_800ExtraBold,
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
   });
 
   useEffect(() => {

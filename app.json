@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "finapp",
-    "backgroundColor": "#05070B",
+    "backgroundColor": "#050505",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.venkatasai.fin",
@@ -19,7 +19,7 @@
       "package": "com.venkatasai.fin",
       "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#05070B",
+        "backgroundColor": "#050505",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

@@ -269,7 +269,7 @@ const pillStyles = StyleSheet.create({
   },
   tint: {
     flex: 1,
-    backgroundColor: 'rgba(10, 15, 22, 0.88)',
+    backgroundColor: 'rgba(8, 8, 8, 0.92)',
   },
   indicator: {
     position: 'absolute',
