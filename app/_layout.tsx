@@ -16,7 +16,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
 import { BudgetsProvider } from '../context/BudgetsContext';
-import LiveAlertToast from '../components/LiveAlertToast';
+import { ImportedTransactionsProvider } from '../context/ImportedTransactionsContext';
 import MobileWebBlocker from '../components/MobileWebBlocker';
 import { colors, fontFamily } from '../constants/theme';
 
@@ -61,6 +61,10 @@ function AuthGate() {
       <Stack.Screen name="sign-in" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="import-statement" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="books" />
+      <Stack.Screen name="gst-calculator" />
+      <Stack.Screen name="connect-payments" />
     </Stack>
   );
 }
@@ -92,9 +96,10 @@ export default function RootLayout() {
           <SettingsProvider>
             <GoalsProvider>
               <BudgetsProvider>
-                <StatusBar style="auto" />
-                <AuthGate />
-                <LiveAlertToast />
+                <ImportedTransactionsProvider>
+                  <StatusBar style="light" />
+                  <AuthGate />
+                </ImportedTransactionsProvider>
               </BudgetsProvider>
             </GoalsProvider>
           </SettingsProvider>

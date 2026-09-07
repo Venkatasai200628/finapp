@@ -4,40 +4,34 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors, fontFamily, radius, shadow, spacing } from '../constants/theme';
 import { SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
 
+const HIDDEN = new Set(['finance', 'insights']);
+
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: 'home',
-  finance: 'wallet',
-  insights: 'bar-chart',
+  books: 'book',
+  gst: 'calculator',
   settings: 'settings-sharp',
 };
 
 const LABELS: Record<string, string> = {
   index: 'Home',
-  finance: 'Finance',
-  insights: 'Insights',
+  books: 'Books',
+  gst: 'GST',
   settings: 'Settings',
 };
 
-type TabBarRoute = { key: string; name: string };
-type TabBarState = { index: number; routes: TabBarRoute[] };
-type TabBarNavigation = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  emit: (e: any) => { defaultPrevented?: boolean };
-  navigate: (name: string) => void;
-};
-
-type Props = {
-  state: TabBarState;
-  navigation: TabBarNavigation;
-};
-
 const SPRING = { damping: 26, stiffness: 260, mass: 0.6, overshootClamping: true };
-const ON_ACCENT = colors.ringCore; // dark text/icon reads correctly against the light cyan accent
+const ON_ACCENT = colors.onAccent;
 
-export default function FloatingTabBar({ state, navigation }: Props) {
+function visibleRoutes(state: BottomTabBarProps['state']) {
+  return state.routes.filter((route) => !HIDDEN.has(route.name));
+}
+
+export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const { isDesktop } = useResponsive();
   return isDesktop ? (
     <Sidebar state={state} navigation={navigation} />
@@ -46,43 +40,44 @@ export default function FloatingTabBar({ state, navigation }: Props) {
   );
 }
 
-function press(navigation: TabBarNavigation, route: TabBarRoute, focused: boolean) {
+function press(navigation: BottomTabBarProps['navigation'], route: { key: string; name: string }, focused: boolean) {
   const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
   if (!focused && !event.defaultPrevented) {
     navigation.navigate(route.name);
   }
 }
 
-function Sidebar({ state, navigation }: Props) {
+function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
+  const routes = visibleRoutes(state);
   const itemHeight = 48;
-  const indicatorY = useSharedValue(state.index * itemHeight);
+  const focusedIndex = Math.max(
+    0,
+    routes.findIndex((route) => route.key === state.routes[state.index]?.key)
+  );
+  const indicatorY = useSharedValue(focusedIndex * itemHeight);
 
   useEffect(() => {
-    indicatorY.value = withSpring(state.index * itemHeight, SPRING);
-  }, [state.index, indicatorY]);
+    indicatorY.value = withSpring(focusedIndex * itemHeight, SPRING);
+  }, [focusedIndex, indicatorY]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: indicatorY.value }],
   }));
 
   return (
-    // Solid, not blurred: this rail sits in the screen's own left margin, so
-    // there's nothing behind it for a blur to pick up — it would just show
-    // whatever's under the page (see FloatingPillBar below for the version
-    // that actually overlaps scrolling content and benefits from real blur).
     <View style={[sidebarStyles.wrap, { paddingTop: insets.top + spacing.xl }]}>
       <View style={sidebarStyles.brandRow}>
         <View style={sidebarStyles.brandMark}>
-          <Ionicons name="pulse" size={16} color={ON_ACCENT} />
+          <Ionicons name="sparkles" size={15} color={ON_ACCENT} />
         </View>
         <Text style={sidebarStyles.brandText}>Fin</Text>
       </View>
 
       <View style={sidebarStyles.navList}>
         <Animated.View style={[sidebarStyles.indicator, { height: itemHeight - 6 }, indicatorStyle]} />
-        {state.routes.map((route, index) => {
-          const focused = state.index === index;
+        {routes.map((route) => {
+          const focused = route.key === state.routes[state.index]?.key;
           return (
             <Pressable
               key={route.key}
@@ -99,21 +94,26 @@ function Sidebar({ state, navigation }: Props) {
       </View>
 
       <View style={sidebarStyles.footer}>
-        <Text style={sidebarStyles.footerText}>Personal Financial{'\n'}Intelligence System</Text>
+        <Text style={sidebarStyles.footerText}>Books · GST · cash flow{'\n'}from your statement only</Text>
       </View>
     </View>
   );
 }
 
-function FloatingPillBar({ state, navigation }: Props) {
+function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
-  const barWidth = 340;
-  const tabWidth = barWidth / state.routes.length;
-  const indicatorX = useSharedValue(state.index * tabWidth);
+  const routes = visibleRoutes(state);
+  const barWidth = 348;
+  const tabWidth = barWidth / Math.max(routes.length, 1);
+  const focusedIndex = Math.max(
+    0,
+    routes.findIndex((route) => route.key === state.routes[state.index]?.key)
+  );
+  const indicatorX = useSharedValue(focusedIndex * tabWidth);
 
   useEffect(() => {
-    indicatorX.value = withSpring(state.index * tabWidth, SPRING);
-  }, [state.index, tabWidth, indicatorX]);
+    indicatorX.value = withSpring(focusedIndex * tabWidth, SPRING);
+  }, [focusedIndex, tabWidth, indicatorX]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.value }],
@@ -122,20 +122,20 @@ function FloatingPillBar({ state, navigation }: Props) {
   return (
     <View style={[pillStyles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} pointerEvents="box-none">
       <View style={[pillStyles.bar, { width: barWidth }, shadow.floating]}>
-        <BlurView intensity={50} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
+        <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
         <View style={[StyleSheet.absoluteFill, { borderRadius: radius.xl, overflow: 'hidden' }]}>
           <View style={pillStyles.tint} />
         </View>
         <Animated.View style={[pillStyles.indicator, { width: tabWidth - 8 }, indicatorStyle]} />
-        {state.routes.map((route, index) => {
-          const focused = state.index === index;
+        {routes.map((route) => {
+          const focused = route.key === state.routes[state.index]?.key;
           return (
             <Pressable
               key={route.key}
               onPress={() => press(navigation, route, focused)}
               style={[pillStyles.tab, { width: tabWidth }]}
             >
-              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={19} color={focused ? ON_ACCENT : colors.textMuted} />
+              <Ionicons name={ICONS[route.name] ?? 'ellipse'} size={18} color={focused ? ON_ACCENT : colors.textMuted} />
               {focused && <Text style={pillStyles.label}>{LABELS[route.name] ?? route.name}</Text>}
             </Pressable>
           );
@@ -158,6 +158,7 @@ const sidebarStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
     overflow: 'hidden',
+    zIndex: 20,
   },
   brandRow: {
     flexDirection: 'row',
@@ -167,17 +168,18 @@ const sidebarStyles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   brandMark: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandText: {
-    fontSize: 17,
+    fontSize: 18,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
+    letterSpacing: -0.4,
   },
   navList: {
     position: 'relative',
@@ -210,9 +212,9 @@ const sidebarStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   footerText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: colors.textMuted,
-    lineHeight: 14,
+    lineHeight: 15,
   },
 });
 
@@ -228,14 +230,14 @@ const pillStyles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     padding: 4,
     alignItems: 'center',
     overflow: 'hidden',
   },
   tint: {
     flex: 1,
-    backgroundColor: colors.surfaceHi,
+    backgroundColor: 'rgba(14, 19, 28, 0.82)',
   },
   indicator: {
     position: 'absolute',

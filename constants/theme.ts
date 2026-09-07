@@ -1,79 +1,42 @@
-// "Arctic mono" — near-black canvas with an icy cyan/blue glow, frosted
-// glass surfaces, Lexend throughout. See components/Card.tsx and
-// components/ScreenGlow.tsx for how these tokens become the glass effect.
-
-import { Appearance } from 'react-native';
-
-const isLight = Appearance.getColorScheme() === 'light';
-
-export const lightColors = {
-  bg: '#ffffff',
-  bgAlt: '#f8fafc',
-  panelSolid: '#ffffff',
-  glow1: '#e0f2fe',
-  glow2: '#dcfce3',
-  surface: 'rgba(0,0,0,0.03)',
-  surfaceSoft: 'rgba(0,0,0,0.02)',
-  surfaceStrong: 'rgba(0,0,0,0.06)',
-  surfaceAlt: 'rgba(0,0,0,0.04)',
-  surfaceHi: 'rgba(0,0,0,0.08)',
-  border: 'rgba(0,0,0,0.1)',
-  borderStrong: 'rgba(0,0,0,0.15)',
-  borderSoft: 'rgba(0,0,0,0.05)',
-  textPrimary: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  accent: '#0ea5e9',
-  accent2: '#38bdf8',
-  income: '#10b981',
-  expense: '#ef4444',
-  savings: '#0ea5e9',
-  good: '#10b981',
-  warn: '#f59e0b',
-  danger: '#ef4444',
-  live: '#0ea5e9',
-  ringCore: '#f1f5f9',
+export const colors = {
+  bg: '#07090E',
+  bgAlt: '#0C1018',
+  panelSolid: '#0E131C',
+  glow1: 'rgba(61, 220, 151, 0.22)',
+  glow2: 'rgba(110, 168, 255, 0.16)',
+  surface: '#121821',
+  surfaceSoft: '#161E2A',
+  surfaceStrong: '#1A2330',
+  surfaceAlt: '#1C2533',
+  surfaceHi: '#1E2838',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderStrong: 'rgba(255, 255, 255, 0.14)',
+  borderSoft: 'rgba(255, 255, 255, 0.05)',
+  textPrimary: '#F3F6FA',
+  textSecondary: '#A7B2C3',
+  textMuted: '#6E7A8C',
+  accent: '#3DDC97',
+  accent2: '#2EC4B6',
+  income: '#3DDC97',
+  expense: '#FF7A86',
+  savings: '#7EB6FF',
+  good: '#3DDC97',
+  warn: '#F5B942',
+  danger: '#FF7A86',
+  live: '#3DDC97',
+  ringCore: '#06140E',
+  onAccent: '#06140E',
 };
-
-export const darkColors = {
-  bg: '#121212',
-  bgAlt: '#000000',
-  panelSolid: '#1e1e1e',
-  glow1: '#121212',
-  glow2: '#121212',
-  surface: 'rgba(255,255,255,0.06)',
-  surfaceSoft: 'rgba(255,255,255,0.04)',
-  surfaceStrong: 'rgba(255,255,255,0.1)',
-  surfaceAlt: 'rgba(255,255,255,0.08)',
-  surfaceHi: 'rgba(255,255,255,0.12)',
-  border: 'rgba(255,255,255,0.15)',
-  borderStrong: 'rgba(255,255,255,0.25)',
-  borderSoft: 'rgba(255,255,255,0.1)',
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  accent: '#38bdf8',
-  accent2: '#7dd3fc',
-  income: '#34d399',
-  expense: '#f87171',
-  savings: '#38bdf8',
-  good: '#34d399',
-  warn: '#fbbf24',
-  danger: '#f87171',
-  live: '#38bdf8',
-  ringCore: '#1e293b',
-};
-
-export const colors = isLight ? lightColors : darkColors;
 
 export const gradients = {
-  hero: ['#0f4c4f', '#0a2540'] as const,
-  income: ['#1a4f4a', '#5eead4'] as const,
-  expense: ['#7a2e1f', '#ff9270'] as const,
-  savings: ['#0a3a52', '#7dd3fc'] as const,
-  card: ['#0c1618', '#05090c'] as const,
-  danger: ['#7a1f2e', '#ff6b6b'] as const,
-  live: ['#5eead4', '#22c3a6'] as const,
+  hero: ['#12352C', '#0B1C28', '#0A1220'] as const,
+  income: ['#1A4A38', '#12352C'] as const,
+  expense: ['#4A1E28', '#2A1218'] as const,
+  savings: ['#1A334E', '#122033'] as const,
+  card: ['#161E2A', '#121821'] as const,
+  danger: ['#4A1E28', '#2A1218'] as const,
+  live: ['#12352C', '#0B1C28'] as const,
+  screen: ['#07090E', '#0C1412', '#07090E'] as const,
 };
 
 export const spacing = {
@@ -87,16 +50,12 @@ export const spacing = {
 
 export const radius = {
   sm: 10,
-  md: 18,
-  lg: 24,
-  xl: 30,
+  md: 16,
+  lg: 22,
+  xl: 28,
   pill: 999,
 };
 
-// Lexend has no variable-weight build in @expo-google-fonts, so bold text
-// must point at the matching static family — fontWeight alone won't fake
-// bold for a custom font on Android. Reach for these instead of raw
-// fontWeight when you need something bold to render correctly natively.
 export const fontFamily = {
   regular: 'Lexend_400Regular',
   medium: 'Lexend_500Medium',
@@ -106,12 +65,19 @@ export const fontFamily = {
 };
 
 export const typography = {
-  title: { fontSize: 28, fontFamily: fontFamily.bold, color: colors.textPrimary, letterSpacing: -0.4 },
-  h2: { fontSize: 18, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
-  h3: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
-  body: { fontSize: 14, fontFamily: fontFamily.regular, color: colors.textSecondary },
+  kicker: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    color: colors.accent,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase' as const,
+  },
+  title: { fontSize: 30, fontFamily: fontFamily.extraBold, color: colors.textPrimary, letterSpacing: -0.8 },
+  h2: { fontSize: 18, fontFamily: fontFamily.semiBold, color: colors.textPrimary, letterSpacing: -0.3 },
+  h3: { fontSize: 14, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
+  body: { fontSize: 14, fontFamily: fontFamily.regular, color: colors.textSecondary, lineHeight: 20 },
   caption: { fontSize: 12, fontFamily: fontFamily.medium, color: colors.textMuted },
-  statNumber: { fontSize: 32, fontFamily: fontFamily.bold, color: colors.textPrimary, letterSpacing: -0.4 },
+  statNumber: { fontSize: 28, fontFamily: fontFamily.extraBold, color: colors.textPrimary, letterSpacing: -0.6 },
 };
 
 export function statusColor(status: 'good' | 'warn' | 'danger') {
@@ -121,23 +87,36 @@ export function statusColor(status: 'good' | 'warn' | 'danger') {
 export const shadow = {
   card: {
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
+    elevation: 4,
   },
   floating: {
     shadowColor: '#000',
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 12,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
   },
   glow: {
     shadowColor: colors.accent,
-    shadowOpacity: 0.35,
-    shadowRadius: 26,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    elevation: 6,
   },
 };
+
+export function rupee(n: number, opts?: { signed?: boolean; digits?: number }) {
+  const digits = opts?.digits ?? 0;
+  const abs = Math.abs(n).toLocaleString('en-IN', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  if (opts?.signed) {
+    const sign = n >= 0 ? '+' : '−';
+    return `${sign}₹${abs}`;
+  }
+  return `₹${abs}`;
+}

@@ -1,13 +1,22 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import FloatingTabBar from '../../components/FloatingTabBar';
+import { colors } from '../../constants/theme';
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: '#0ea5e9' }}>
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} /> }} />
-      <Tabs.Screen name="finance" options={{ title: 'Finance', tabBarIcon: ({ color }) => <Ionicons name="wallet" size={24} color={color} /> }} />
-      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={24} color={color} /> }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} /> }} />
+    <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="books" options={{ title: 'Books' }} />
+      <Tabs.Screen name="gst" options={{ title: 'GST' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      <Tabs.Screen name="finance" options={{ href: null }} />
+      <Tabs.Screen name="insights" options={{ href: null }} />
     </Tabs>
   );
 }

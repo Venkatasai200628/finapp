@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "finapp",
-    "backgroundColor": "#0B0F14",
+    "backgroundColor": "#07090E",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.venkatasai.fin",
@@ -19,16 +19,12 @@
       "package": "com.venkatasai.fin",
       "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#05090c",
+        "backgroundColor": "#07090E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "READ_SMS",
-        "RECEIVE_SMS"
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png",

@@ -13,7 +13,7 @@ import { isConfigured as aaConfigured } from './aa/setu';
 
 const PORT = Number(process.env.PORT) || 4000;
 const SIMULATOR_INTERVAL_MS = Number(process.env.SIMULATOR_INTERVAL_MS) || 8000;
-const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === 'true';
+const SIMULATOR_ENABLED = false;
 
 const app = express();
 const httpServer = createServer(app);
@@ -80,10 +80,10 @@ io.on('connection', (socket) => {
   // A room per user is what keeps one account's stream out of another's.
   socket.join(userId);
 
-  socket.emit(
-    'history',
-    listTransactions(userId, 20).map((tx) => ({ ...tx, reasons: JSON.parse(tx.reasons) }))
-  );
+  const history = listTransactions(userId, 50)
+    .filter((tx) => tx.source !== 'simulator')
+    .map((tx) => ({ ...tx, reasons: JSON.parse(tx.reasons) }));
+  socket.emit('history', history);
   socket.emit('baseline', computeBaseline(userId));
 
   if (SIMULATOR_ENABLED && !aaConfigured()) {

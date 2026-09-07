@@ -1,496 +1,75 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useEffect, useState } from 'react';
 import Card from '../../components/Card';
-import ScreenGlow from '../../components/ScreenGlow';
-import LiveIndicator from '../../components/LiveIndicator';
-import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
-import { useSettings } from '../../context/SettingsContext';
+import Screen from '../../components/Screen';
+import SectionHeader from '../../components/SectionHeader';
+import { colors, fontFamily, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, useResponsive } from '../../hooks/useResponsive';
-
-const SENSITIVITY_OPTIONS: Array<{ key: 'low' | 'medium' | 'high'; label: string; note: string }> = [
-  { key: 'low', label: 'Low', note: 'Fewer, high-confidence alerts' },
-  { key: 'medium', label: 'Medium', note: 'Balanced — recommended' },
-  { key: 'high', label: 'High', note: 'Catches more, may over-alert' },
-];
-
-function SensitivitySelector() {
-  const { sensitivity, setSensitivity } = useSettings();
-  const activeIndex = SENSITIVITY_OPTIONS.findIndex((o) => o.key === sensitivity);
-  const [wrapWidth, setWrapWidth] = useState(0);
-  const itemWidth = wrapWidth / SENSITIVITY_OPTIONS.length;
-  const indicatorX = useSharedValue(0);
-
-  useEffect(() => {
-    indicatorX.value = withSpring(activeIndex * itemWidth, {
-      damping: 26,
-      stiffness: 260,
-      mass: 0.6,
-      overshootClamping: true,
-    });
-  }, [activeIndex, itemWidth, indicatorX]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-  }));
-
-  const onLayout = (e: LayoutChangeEvent) => setWrapWidth(e.nativeEvent.layout.width);
-
-  return (
-    <View>
-      <View style={styles.segmentWrap} onLayout={onLayout}>
-        {wrapWidth > 0 && (
-          <Animated.View style={[styles.segmentIndicator, { width: itemWidth - 8 }, indicatorStyle]} />
-        )}
-        {SENSITIVITY_OPTIONS.map((opt) => (
-          <Pressable key={opt.key} style={styles.segmentItem} onPress={() => setSensitivity(opt.key)}>
-            <Text style={[styles.segmentLabel, sensitivity === opt.key && styles.segmentLabelActive]}>{opt.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={styles.sensitivityNote}>{SENSITIVITY_OPTIONS[activeIndex]?.note}</Text>
-    </View>
-  );
-}
-
-function SettingsRow({
-  icon,
-  iconColor,
-  title,
-  subtitle,
-  right,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-}) {
-  return (
-    <View style={styles.row}>
-      <View style={[styles.rowIcon, { backgroundColor: iconColor + '22' }]}>
-        <Ionicons name={icon} size={17} color={iconColor} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {subtitle && <Text style={styles.rowSubtitle}>{subtitle}</Text>}
-      </View>
-      {right}
-    </View>
-  );
-}
-
-const DATA_SOURCE_LABEL: Record<string, string> = {
-  live: 'Live — connected to backend',
-  local: 'Local simulation (no backend)',
-  connecting: 'Connecting to backend…',
-};
 
 export default function SettingsScreen() {
-  const {
-    realtimeDetectionEnabled,
-    setRealtimeDetectionEnabled,
-    liveFeed,
-    liveAlerts,
-    triggerSimulatedTransaction,
-    dataSource,
-    baseline,
-  } = useSettings();
   const { email, signOut } = useAuth();
-  const { isDesktop } = useResponsive();
 
   return (
-    <SafeAreaView style={[styles.safe, isDesktop && { marginLeft: SIDEBAR_WIDTH }]} edges={['top']}>
-      <ScreenGlow />
-      <ScrollView
-        contentContainerStyle={[styles.content, isDesktop && styles.contentDesktop]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={typography.title}>Settings</Text>
-        <Text style={styles.subtitle}>Control detection, alerts, and simulation behavior.</Text>
+    <Screen>
+      <SectionHeader kicker="Account" title="Settings" subtitle="This workspace stays on your signed-in account." />
 
-        <Animated.View entering={FadeInDown.duration(450)}>
-          <Card elevated style={styles.card}>
-            <View style={styles.heroTop}>
-              <Text style={styles.heroTitle}>Real-time detection</Text>
-              <Switch
-                value={realtimeDetectionEnabled}
-                onValueChange={setRealtimeDetectionEnabled}
-                trackColor={{ false: colors.surfaceAlt, true: colors.good }}
-                thumbColor={colors.textPrimary}
-              />
-            </View>
-            <Text style={styles.heroBody}>
-              Instantly evaluate each transaction against your normal spending behavior — amount, time, merchant —
-              and warn you the moment something looks unusual.
-            </Text>
-            <View style={styles.sourceBadge}>
-              <View
-                style={[
-                  styles.sourceDot,
-                  { backgroundColor: dataSource === 'live' ? colors.good : dataSource === 'local' ? colors.warn : colors.textMuted },
-                ]}
-              />
-              <Text style={styles.sourceText}>{DATA_SOURCE_LABEL[dataSource]}</Text>
-            </View>
-            <View style={styles.heroStatsRow}>
-              <View style={styles.heroStat}>
-                <LiveIndicator active={realtimeDetectionEnabled} />
-                <Text style={styles.heroStatLabel}>Engine status</Text>
-              </View>
-              <View style={styles.heroStat}>
-                <Text style={styles.heroStatNumber}>{liveFeed.length}</Text>
-                <Text style={styles.heroStatLabel}>Scanned this session</Text>
-              </View>
-              <View style={styles.heroStat}>
-                <Text style={[styles.heroStatNumber, { color: colors.danger }]}>{liveAlerts.length}</Text>
-                <Text style={styles.heroStatLabel}>Flagged</Text>
-              </View>
-            </View>
-          </Card>
-        </Animated.View>
+      <Card style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.icon}>
+            <Ionicons name="person-outline" size={18} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>{email ?? 'Signed in'}</Text>
+            <Text style={styles.rowSub}>Books stay private to this account</Text>
+          </View>
+          <Pressable style={styles.out} onPress={signOut}>
+            <Text style={styles.outText}>Sign out</Text>
+          </Pressable>
+        </View>
+      </Card>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(450)}>
-          <Card style={styles.card}>
-            <Text style={typography.h3}>Detection sensitivity</Text>
-            <View style={{ marginTop: spacing.md }}>
-              <SensitivitySelector />
-            </View>
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(140).duration(450)}>
-          <Card style={styles.card}>
-            <SettingsRow
-              icon="flash"
-              iconColor={colors.accent}
-              title="Simulate a transaction now"
-              subtitle="Manually trigger the detection engine for a demo"
-              right={
-                <Pressable style={styles.simulateBtn} onPress={triggerSimulatedTransaction}>
-                  <Ionicons name="play" size={13} color={colors.ringCore} />
-                  <Text style={styles.simulateBtnText}>Run</Text>
-                </Pressable>
-              }
-            />
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(170).duration(450)}>
-          <Card style={styles.card}>
-            <SettingsRow
-              icon="chatbox-ellipses"
-              iconColor={colors.income}
-              title="Bank SMS detection"
-              subtitle="Read real transactions from bank messages"
-              right={
-                <Pressable style={styles.simulateBtn} onPress={() => router.push('/sms-test')}>
-                  <Text style={styles.simulateBtnText}>Open</Text>
-                </Pressable>
-              }
-            />
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(200).duration(450)}>
-          <Card style={styles.card}>
-            <Text style={styles.groupLabel}>Notifications</Text>
-            <SettingsRow
-              icon="notifications"
-              iconColor={colors.savings}
-              title="Push alerts"
-              subtitle="Get notified even when the app is closed"
-              right={<Switch value trackColor={{ false: colors.surfaceAlt, true: colors.good }} thumbColor={colors.textPrimary} />}
-            />
-            <View style={styles.divider} />
-            <SettingsRow
-              icon="moon"
-              iconColor={colors.accent2}
-              title="Quiet hours"
-              subtitle="Mute non-critical alerts, 11 PM – 7 AM"
-              right={<Switch value={false} trackColor={{ false: colors.surfaceAlt, true: colors.good }} thumbColor={colors.textPrimary} />}
-            />
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(260).duration(450)}>
-          <Card style={styles.card}>
-            <Text style={styles.groupLabel}>What the engine has learned</Text>
-            {!baseline ? (
-              <Text style={styles.aboutBody}>Connect the engine to see the profile it builds from your history.</Text>
-            ) : !baseline.isLearned ? (
-              <Text style={styles.aboutBody}>
-                Still using starter defaults — {baseline.learnedFrom} of 12 transactions needed before it starts
-                learning your own patterns.
-              </Text>
-            ) : (
-              <>
-                <Text style={styles.aboutBody}>
-                  Built from your last {baseline.learnedFrom} transactions. Anything far outside these gets flagged.
-                </Text>
-                <View style={styles.learnedGrid}>
-                  {baseline.categories
-                    .filter((c) => c.sampleSize > 0)
-                    .map((c) => (
-                      <View key={c.category} style={styles.learnedRow}>
-                        <Text style={styles.learnedCategory}>{c.category}</Text>
-                        <Text style={styles.learnedValue}>
-                          ₹{c.avgAmount.toLocaleString('en-IN')} avg
-                          <Text style={styles.learnedMeta}> · {c.sampleSize} seen</Text>
-                        </Text>
-                      </View>
-                    ))}
-                  <View style={styles.learnedRow}>
-                    <Text style={styles.learnedCategory}>Usual hours</Text>
-                    <Text style={styles.learnedValue}>
-                      {baseline.normalHourStart}:00 – {baseline.normalHourEnd}:00
-                    </Text>
-                  </View>
-                  <View style={styles.learnedRow}>
-                    <Text style={styles.learnedCategory}>Normal ceiling</Text>
-                    <Text style={styles.learnedValue}>₹{Math.round(baseline.maxNormalAmount).toLocaleString('en-IN')}</Text>
-                  </View>
-                </View>
-              </>
-            )}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(290).duration(450)}>
-          <Card style={styles.card}>
-            <SettingsRow
-              icon="person-circle"
-              iconColor={colors.accent2}
-              title={email ?? 'Signed in'}
-              subtitle="Your transactions and profile are private to this account"
-              right={
-                <Pressable style={styles.signOutBtn} onPress={signOut}>
-                  <Text style={styles.signOutText}>Sign out</Text>
-                </Pressable>
-              }
-            />
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(320).duration(450)}>
-          <Card style={styles.card}>
-            <Text style={styles.groupLabel}>How detection works</Text>
-            <Text style={styles.aboutBody}>
-              Each transaction is scored against the profile above — amount vs. your category average, whether
-              the merchant is familiar, and time of day. This is deviation detection, not fraud detection: a flag
-              means it doesn&apos;t match your pattern, which is a reason to look rather than proof of a threat.
-            </Text>
-          </Card>
-        </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
+      <Card style={styles.card}>
+        <Text style={styles.guideTitle}>Where things live</Text>
+        <View style={styles.guideRow}>
+          <Ionicons name="home-outline" size={16} color={colors.accent} />
+          <Text style={styles.guide}>Home — net, charts, forecast, recent activity</Text>
+        </View>
+        <View style={styles.guideRow}>
+          <Ionicons name="book-outline" size={16} color={colors.savings} />
+          <Text style={styles.guide}>Books — CSV upload, parties, category bars</Text>
+        </View>
+        <View style={styles.guideRow}>
+          <Ionicons name="calculator-outline" size={16} color={colors.warn} />
+          <Text style={styles.guide}>GST — line calculator and bill</Text>
+        </View>
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: 120,
-  },
-  contentDesktop: {
-    maxWidth: CONTENT_MAX_WIDTH,
-    width: '100%',
-    alignSelf: 'center',
-    paddingBottom: spacing.xxl,
-    paddingTop: spacing.xl,
-  },
-  subtitle: {
-    ...typography.body,
-    marginTop: 4,
-    marginBottom: spacing.lg,
-  },
-  card: {
-    marginBottom: spacing.lg,
-  },
-  heroTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroTitle: {
-    fontSize: 17,
-    fontFamily: fontFamily.extraBold,
-    color: colors.textPrimary,
-  },
-  heroBody: {
-    ...typography.body,
-    marginTop: spacing.sm,
-    lineHeight: 19,
-  },
-  sourceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.md,
-  },
-  sourceDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  sourceText: {
-    fontSize: 11.5,
-    fontFamily: fontFamily.bold,
-    color: colors.textMuted,
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  heroStat: {
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  heroStatNumber: {
-    fontSize: 18,
-    fontFamily: fontFamily.extraBold,
-    color: colors.textPrimary,
-  },
-  heroStatLabel: {
-    fontSize: 10.5,
-    color: colors.textMuted,
-    fontFamily: fontFamily.semiBold,
-  },
-  segmentWrap: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: 4,
-    position: 'relative',
-  },
-  segmentIndicator: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 4,
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-  },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  segmentLabel: {
-    fontSize: 12.5,
-    fontFamily: fontFamily.bold,
-    color: colors.textMuted,
-  },
-  segmentLabelActive: {
-    color: colors.ringCore,
-  },
-  sensitivityNote: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.sm,
+  card: { marginBottom: spacing.lg },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  icon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.accent + '18',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowTitle: {
-    fontSize: 14,
-    fontFamily: fontFamily.bold,
-    color: colors.textPrimary,
-  },
-  rowSubtitle: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  simulateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.accent,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
-  },
-  simulateBtnText: {
-    fontSize: 12,
-    fontFamily: fontFamily.extraBold,
-    color: colors.ringCore,
-  },
-  signOutBtn: {
+  rowTitle: { fontSize: 14, fontFamily: fontFamily.bold, color: colors.textPrimary },
+  rowSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  out: {
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
     borderRadius: radius.pill,
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 14,
+    backgroundColor: colors.bgAlt,
   },
-  signOutText: {
-    fontSize: 12,
-    fontFamily: fontFamily.bold,
-    color: colors.textSecondary,
-  },
-  groupLabel: {
-    fontSize: 11,
-    fontFamily: fontFamily.extraBold,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: spacing.md,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  aboutBody: {
-    ...typography.body,
-    lineHeight: 19,
-  },
-  learnedGrid: {
-    marginTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  learnedRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSoft,
-  },
-  learnedCategory: {
-    fontSize: 12.5,
-    color: colors.textSecondary,
-  },
-  learnedValue: {
-    fontSize: 12.5,
-    fontFamily: fontFamily.semiBold,
-    color: colors.textPrimary,
-  },
-  learnedMeta: {
-    fontFamily: fontFamily.regular,
-    color: colors.textMuted,
-  },
+  outText: { fontSize: 12, fontFamily: fontFamily.semiBold, color: colors.textSecondary },
+  guideTitle: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary, marginBottom: spacing.sm },
+  guideRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: spacing.sm },
+  guide: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
 });

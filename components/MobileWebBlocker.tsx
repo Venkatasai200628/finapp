@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: fontFamily.bold,
-    color: colors.bg,
+    color: colors.onAccent,
     fontSize: 16,
   },
 });

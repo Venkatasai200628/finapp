@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import Card from '../components/Card';
 import ScreenGlow from '../components/ScreenGlow';
 import { useAuth } from '../context/AuthContext';
-import { colors, fontFamily, radius, spacing, typography } from '../constants/theme';
+import { colors, fontFamily, radius, spacing } from '../constants/theme';
 
 export default function SignInScreen() {
   const { signIn, signUp } = useAuth();
@@ -23,7 +23,6 @@ export default function SignInScreen() {
     setBusy(true);
     const message = isSignUp ? await signUp(email, password) : await signIn(email, password);
     setBusy(false);
-    // On success the root layout swaps this screen out — nothing to do here.
     if (message) setError(message);
   };
 
@@ -31,83 +30,78 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <LinearGradient colors={['#07090E', '#0C1814', '#07090E']} style={StyleSheet.absoluteFill} />
       <ScreenGlow />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Animated.View entering={FadeInDown.duration(500)} style={styles.brand}>
+          <View style={styles.brand}>
             <View style={styles.brandMark}>
-              <Ionicons name="pulse" size={22} color={colors.ringCore} />
+              <Ionicons name="sparkles" size={22} color={colors.onAccent} />
             </View>
-            <Text style={typography.title}>Fin</Text>
-            <Text style={styles.tagline}>Spots the transactions that don&apos;t look like you.</Text>
-          </Animated.View>
+            <Text style={styles.brandName}>Fin</Text>
+            <Text style={styles.tagline}>Books, cash-flow plots and GST — empty until you add a statement.</Text>
+          </View>
 
-          <Animated.View entering={FadeInDown.delay(80).duration(500)}>
-            <Card elevated>
-              <Text style={styles.cardTitle}>{isSignUp ? 'Create your account' : 'Welcome back'}</Text>
+          <Card elevated>
+            <Text style={styles.cardTitle}>{isSignUp ? 'Create your account' : 'Welcome back'}</Text>
 
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                style={styles.input}
-              />
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              style={styles.input}
+            />
 
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder={isSignUp ? 'At least 8 characters' : 'Your password'}
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                textContentType={isSignUp ? 'newPassword' : 'password'}
-                style={styles.input}
-                onSubmitEditing={canSubmit ? submit : undefined}
-              />
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={isSignUp ? 'At least 8 characters' : 'Your password'}
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType={isSignUp ? 'newPassword' : 'password'}
+              style={styles.input}
+              onSubmitEditing={canSubmit ? submit : undefined}
+            />
 
-              {error && (
-                <View style={styles.errorRow}>
-                  <Ionicons name="alert-circle" size={14} color={colors.danger} />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
+            {error && (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={colors.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
-              <Pressable
-                style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
-                onPress={submit}
-                disabled={!canSubmit}
-              >
-                <Text style={styles.submitBtnText}>
-                  {busy ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}
-                </Text>
-              </Pressable>
+            <Pressable
+              style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
+              onPress={submit}
+              disabled={!canSubmit}
+            >
+              <Text style={styles.submitBtnText}>
+                {busy ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}
+              </Text>
+            </Pressable>
 
-              <Pressable
-                style={styles.switchMode}
-                onPress={() => {
-                  setMode(isSignUp ? 'signin' : 'signup');
-                  setError(null);
-                }}
-              >
-                <Text style={styles.switchModeText}>
-                  {isSignUp ? 'Already have an account? Sign in' : "New here? Create an account"}
-                </Text>
-              </Pressable>
-            </Card>
-          </Animated.View>
+            <Pressable
+              style={styles.switchMode}
+              onPress={() => {
+                setMode(isSignUp ? 'signin' : 'signup');
+                setError(null);
+              }}
+            >
+              <Text style={styles.switchModeText}>
+                {isSignUp ? 'Already have an account? Sign in' : 'New here? Create an account'}
+              </Text>
+            </Pressable>
+          </Card>
 
-          <Animated.View entering={FadeInDown.delay(160).duration(500)}>
-            <Text style={styles.footnote}>
-              Your transactions and learned spending profile are private to your account.
-            </Text>
-          </Animated.View>
+          <Text style={styles.footnote}>Your books stay on this account. Nothing is generated for you.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -116,34 +110,48 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingTop: spacing.xxl, flexGrow: 1, justifyContent: 'center', maxWidth: 460, width: '100%', alignSelf: 'center' },
+  content: {
+    padding: spacing.lg,
+    paddingTop: spacing.xxl,
+    flexGrow: 1,
+    justifyContent: 'center',
+    maxWidth: 460,
+    width: '100%',
+    alignSelf: 'center',
+  },
   brand: { alignItems: 'center', marginBottom: spacing.xl },
   brandMark: {
-    width: 46,
-    height: 46,
-    borderRadius: radius.md,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  tagline: { ...typography.body, textAlign: 'center', marginTop: 6, fontSize: 13 },
-  cardTitle: { fontSize: 17, fontFamily: fontFamily.bold, color: colors.textPrimary, marginBottom: spacing.lg },
+  brandName: {
+    fontSize: 34,
+    fontFamily: fontFamily.extraBold,
+    color: colors.textPrimary,
+    letterSpacing: -1,
+  },
+  tagline: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 19 },
+  cardTitle: { fontSize: 18, fontFamily: fontFamily.bold, color: colors.textPrimary, marginBottom: spacing.lg },
   label: {
     fontSize: 11,
     fontFamily: fontFamily.bold,
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.bgAlt,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
-    height: 46,
+    height: 48,
     color: colors.textPrimary,
     fontSize: 14,
     marginBottom: spacing.lg,
@@ -153,12 +161,12 @@ const styles = StyleSheet.create({
   submitBtn: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.45 },
-  submitBtnText: { fontSize: 14, fontFamily: fontFamily.extraBold, color: colors.ringCore },
+  submitBtnText: { fontSize: 14, fontFamily: fontFamily.extraBold, color: colors.onAccent },
   switchMode: { marginTop: spacing.md, alignItems: 'center' },
   switchModeText: { fontSize: 12.5, fontFamily: fontFamily.semiBold, color: colors.accent },
-  footnote: { ...typography.body, fontSize: 11.5, textAlign: 'center', marginTop: spacing.xl, color: colors.textMuted },
+  footnote: { fontSize: 11.5, textAlign: 'center', marginTop: spacing.xl, color: colors.textMuted },
 });

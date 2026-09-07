@@ -1,52 +1,45 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Card from '../components/Card';
+import DetailHeader from '../components/DetailHeader';
+import EmptyState from '../components/EmptyState';
+import Screen from '../components/Screen';
 import TransactionRow from '../components/TransactionRow';
-import ScreenGlow from '../components/ScreenGlow';
-import { allTransactions, Transaction } from '../data/mockData';
-import { fontFamily, colors, radius, spacing, typography } from '../constants/theme';
-
-function txParams(tx: Transaction) {
-  return {
-    id: tx.id,
-    merchant: tx.merchant,
-    category: tx.category,
-    amount: String(tx.amount),
-    time: tx.time,
-    flagged: tx.flagged ? '1' : '0',
-  };
-}
+import { Transaction } from '../data/mockData';
+import { fontFamily, colors, radius, spacing } from '../constants/theme';
+import { useImportedTransactions } from '../context/ImportedTransactionsContext';
 
 const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Uncategorized'];
 
-import { useSettings } from '../context/SettingsContext';
-
 export default function TransactionsScreen() {
-  const { liveFeed } = useSettings();
+  const { imported } = useImportedTransactions();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
+  const all: Transaction[] = useMemo(() => {
+    return imported.map((tx) => ({
+      id: tx.id,
+      merchant: tx.merchant,
+      category: tx.category,
+      amount: tx.amount,
+      time: tx.dateLabel,
+      flagged: false,
+    }));
+  }, [imported]);
+
   const filtered = useMemo(() => {
-    return liveFeed.filter((tx) => {
+    return all.filter((tx) => {
       const matchesCategory = category === 'All' || tx.category === category;
       const matchesQuery = tx.merchant.toLowerCase().includes(query.trim().toLowerCase());
       return matchesCategory && matchesQuery;
     });
-  }, [query, category, liveFeed]);
+  }, [query, category, all]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenGlow />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={typography.h2}>All Transactions</Text>
-        <View style={{ width: 32 }} />
-      </View>
+    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, maxWidth: undefined }}>
+      <DetailHeader title="Transactions" />
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textMuted} />
@@ -70,53 +63,38 @@ export default function TransactionsScreen() {
         })}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
-          <Text style={styles.empty}>No transactions match your filters.</Text>
+          <EmptyState icon="receipt-outline" title="No transactions" body="Upload a bank statement from Books." />
         ) : (
           <Card style={styles.txCard}>
-            {filtered.map((tx, i) => (
+            {filtered.map((tx) => (
               <TransactionRow
                 key={tx.id}
-                tx={{
-                  id: tx.id,
-                  merchant: tx.merchant,
-                  category: tx.category,
-                  amount: tx.amount,
-                  time: new Date(tx.timestamp).toLocaleString(),
-                  flagged: tx.severity === 'danger'
-                }}
-                delay={Math.min(i, 8) * 30}
-                onPress={() => router.push({ pathname: '/transaction/[id]', params: {
-                  id: tx.id, merchant: tx.merchant, category: tx.category, amount: String(tx.amount), time: new Date(tx.timestamp).toLocaleString(), flagged: tx.severity === 'danger' ? '1' : '0'
-                } })}
+                tx={tx}
+                onPress={() =>
+                  router.push({
+                    pathname: '/transaction/[id]',
+                    params: {
+                      id: tx.id,
+                      merchant: tx.merchant,
+                      category: tx.category,
+                      amount: String(tx.amount),
+                      time: tx.time,
+                      flagged: tx.flagged ? '1' : '0',
+                    },
+                  })
+                }
               />
             ))}
           </Card>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  backBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,18 +105,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    height: 42,
+    height: 46,
   },
-  searchInput: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 14,
-  },
-  chipsRow: {
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
+  searchInput: { flex: 1, color: colors.textPrimary, fontSize: 14 },
+  chipsRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   chip: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -147,30 +117,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 14,
   },
-  chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  chipText: {
-    fontSize: 12.5,
-    fontFamily: fontFamily.semiBold,
-    color: colors.textSecondary,
-  },
-  chipTextActive: {
-    color: colors.ringCore,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingTop: 0,
-    paddingBottom: 60,
-  },
-  txCard: {
-    paddingVertical: 0,
-    paddingHorizontal: spacing.lg,
-  },
-  empty: {
-    ...typography.body,
-    textAlign: 'center',
-    marginTop: spacing.xl,
-  },
+  chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  chipText: { fontSize: 12.5, fontFamily: fontFamily.semiBold, color: colors.textSecondary },
+  chipTextActive: { color: colors.onAccent },
+  content: { padding: spacing.lg, paddingTop: 0, paddingBottom: 40 },
+  txCard: { paddingVertical: 4, paddingHorizontal: spacing.lg },
 });

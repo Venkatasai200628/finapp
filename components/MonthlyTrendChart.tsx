@@ -9,39 +9,52 @@ type Props = {
   height?: number;
 };
 
-export default function MonthlyTrendChart({ data, width = 300, height = 140 }: Props) {
-  const pad = 8;
+export default function MonthlyTrendChart({ data, width = 300, height = 148 }: Props) {
+  if (data.length === 0) {
+    return <Text style={styles.empty}>Need more dated rows for a trend.</Text>;
+  }
+
+  const pad = 6;
   const labelH = 18;
   const usableH = height - pad * 2 - labelH;
   const max = Math.max(...data.flatMap((d) => [d.income, d.expense])) || 1;
-
   const groupW = width / data.length;
-  const barW = Math.min(16, groupW * 0.28);
+  const barW = Math.min(14, groupW * 0.28);
   const gap = 4;
 
   return (
     <View>
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.swatch, { backgroundColor: colors.income }]} />
+          <Text style={styles.legendText}>Income</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.swatch, { backgroundColor: colors.expense }]} />
+          <Text style={styles.legendText}>Spend</Text>
+        </View>
+      </View>
       <Svg width={width} height={height}>
         {data.map((d, i) => {
           const cx = groupW * i + groupW / 2;
-          const incomeH = (d.income / max) * usableH;
-          const expenseH = (d.expense / max) * usableH;
+          const incomeH = Math.max((d.income / max) * usableH, 2);
+          const expenseH = Math.max((d.expense / max) * usableH, 2);
           return (
-            <G key={d.month} x={cx}>
+            <G key={d.month}>
               <Rect
-                x={-gap / 2 - barW}
+                x={cx - gap / 2 - barW}
                 y={pad + usableH - incomeH}
                 width={barW}
                 height={incomeH}
-                rx={3}
+                rx={4}
                 fill={colors.income}
               />
               <Rect
-                x={gap / 2}
+                x={cx + gap / 2}
                 y={pad + usableH - expenseH}
                 width={barW}
                 height={expenseH}
-                rx={3}
+                rx={4}
                 fill={colors.expense}
               />
             </G>
@@ -60,6 +73,10 @@ export default function MonthlyTrendChart({ data, width = 300, height = 140 }: P
 }
 
 const styles = StyleSheet.create({
+  legend: { flexDirection: 'row', gap: 14, marginBottom: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  swatch: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 11, color: colors.textMuted, fontFamily: fontFamily.medium },
   labelRow: {
     flexDirection: 'row',
     marginTop: spacing.xs,
@@ -70,4 +87,5 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     textAlign: 'center',
   },
+  empty: { fontSize: 13, color: colors.textMuted, paddingVertical: spacing.md },
 });

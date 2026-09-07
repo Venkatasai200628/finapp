@@ -1,9 +1,7 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import type { Socket } from 'socket.io-client';
-import { generateTransactionEvent, LiveTransaction } from '../lib/realtimeEngine';
-import { Baseline, BACKEND_URL, createBackendSocket, simulateOnBackend } from '../lib/backendClient';
-import { startSmsCapture, SmsStatus } from '../lib/smsListener';
-import { useAuth } from './AuthContext';
+import { createContext, ReactNode, useContext, useState } from 'react';
+import { LiveTransaction } from '../lib/realtimeEngine';
+import { Baseline } from '../lib/backendClient';
+import { SmsStatus } from '../lib/smsListener';
 
 type SettingsState = {
   realtimeDetectionEnabled: boolean;
@@ -15,113 +13,19 @@ type SettingsState = {
   triggerSimulatedTransaction: () => void;
   lastScanAt: number | null;
   smsStatus: SmsStatus | null;
-  /** 'live' = events are streaming from the real backend over WebSocket.
-   *  'local' = no backend configured/reachable, running the on-device fallback simulation. */
   dataSource: 'live' | 'local' | 'connecting';
-  /** What the engine has learned "normal" looks like. Null in local fallback mode. */
   baseline: Baseline | null;
 };
 
 const SettingsContext = createContext<SettingsState | undefined>(undefined);
 
-const SENSITIVITY_INTERVAL: Record<'low' | 'medium' | 'high', number> = {
-  low: 14000,
-  medium: 9000,
-  high: 5000,
-};
-
+/**
+ * Production app starts empty. No simulator, no SMS listener, no socket feed.
+ * Books and Home only show statements the user uploads.
+ */
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
-  const [realtimeDetectionEnabled, setRealtimeDetectionEnabled] = useState(true);
+  const [realtimeDetectionEnabled, setRealtimeDetectionEnabled] = useState(false);
   const [sensitivity, setSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
-  const [liveFeed, setLiveFeed] = useState<LiveTransaction[]>([]);
-  const [lastScanAt, setLastScanAt] = useState<number | null>(null);
-  const [dataSource, setDataSource] = useState<'live' | 'local' | 'connecting'>(BACKEND_URL ? 'connecting' : 'local');
-  const [baseline, setBaseline] = useState<Baseline | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const socketRef = useRef<Socket | null>(null);
-  const tokenRef = useRef<string | null>(null);
-  const [smsStatus, setSmsStatus] = useState<SmsStatus | null>(null);
-
-  // Keep tokenRef in sync so the SMS callback always uses the latest token
-  useEffect(() => { tokenRef.current = token; }, [token]);
-
-  const pushEvent = useCallback((event: LiveTransaction) => {
-    setLastScanAt(Date.now());
-    setLiveFeed((prev) => [event, ...prev].slice(0, 25));
-  }, []);
-
-  // --- Real backend connection. Reconnects when the signed-in user changes,
-  // so switching accounts never leaves the previous user's stream attached.
-  useEffect(() => {
-    setLiveFeed([]);
-    setBaseline(null);
-
-    const socket = token ? createBackendSocket(token) : null;
-    if (!socket) {
-      setDataSource('local');
-      return;
-    }
-    socketRef.current = socket;
-
-    socket.on('connect', () => setDataSource('live'));
-    socket.on('disconnect', () => setDataSource('local'));
-    socket.on('connect_error', () => setDataSource('local'));
-    socket.on('history', (rows: LiveTransaction[]) => {
-      setLiveFeed((prev) => (prev.length ? prev : rows.slice(0, 25)));
-    });
-    socket.on('transaction', (event: LiveTransaction) => pushEvent(event));
-    socket.on('baseline', (next: Baseline) => setBaseline(next));
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  const triggerSimulatedTransaction = useCallback(async () => {
-    if (dataSource === 'live' && token) {
-      const ok = await simulateOnBackend(token);
-      if (ok) return; // the server will emit the event back over the socket
-    }
-    pushEvent(generateTransactionEvent());
-  }, [dataSource, pushEvent, token]);
-
-  // --- On-device fallback simulation, only when there is no live backend ---
-  useEffect(() => {
-    // Requires a signed-in user: otherwise the sign-in screen would sit
-    // behind a stream of invented transactions and fire alerts at someone
-    // who has no account yet.
-    if (!token || !realtimeDetectionEnabled || dataSource === 'live') {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      return;
-    }
-
-    const schedule = () => {
-      const base = SENSITIVITY_INTERVAL[sensitivity];
-      const jitter = base * 0.4 * (Math.random() - 0.5);
-      timerRef.current = setTimeout(() => {
-        pushEvent(generateTransactionEvent());
-        schedule();
-      }, base + jitter);
-    };
-    schedule();
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [token, realtimeDetectionEnabled, sensitivity, pushEvent, dataSource]);
-
-  // --- Auto-start SMS listener when user logs in ---
-  // This is the core of real-time bank transaction detection on Android.
-  // It requests SMS permission once, then silently listens in the background.
-  useEffect(() => {
-    if (!token || !realtimeDetectionEnabled) return;
-    startSmsCapture(() => tokenRef.current, setSmsStatus);
-  }, [token, realtimeDetectionEnabled]);
-
-  const liveAlerts = liveFeed.filter((e) => e.severity === 'danger');
 
   return (
     <SettingsContext.Provider
@@ -130,13 +34,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setRealtimeDetectionEnabled,
         sensitivity,
         setSensitivity,
-        liveFeed,
-        liveAlerts,
-        triggerSimulatedTransaction,
-        lastScanAt,
-        smsStatus,
-        dataSource,
-        baseline,
+        liveFeed: [],
+        liveAlerts: [],
+        triggerSimulatedTransaction: () => {},
+        lastScanAt: null,
+        smsStatus: null,
+        dataSource: 'local',
+        baseline: null,
       }}
     >
       {children}

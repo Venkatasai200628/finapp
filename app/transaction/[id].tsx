@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
-import ScreenGlow from '../../components/ScreenGlow';
+import Screen from '../../components/Screen';
 import { submitVerdict } from '../../lib/backendClient';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
@@ -48,11 +46,9 @@ export default function TransactionDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenGlow />
+    <Screen>
       <DetailHeader title="Transaction" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroWrap}>
+        <View style={styles.heroWrap}>
           <View style={[styles.iconCircle, isFlagged && styles.iconCircleFlagged]}>
             <Ionicons name={icon} size={28} color={isFlagged ? colors.danger : colors.accent} />
           </View>
@@ -61,11 +57,10 @@ export default function TransactionDetailScreen() {
           </Text>
           <Text style={styles.merchant}>{params.merchant}</Text>
           <Text style={styles.time}>{params.time}</Text>
-        </Animated.View>
+        </View>
 
         {isFlagged && resolution === 'none' && (
-          <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-            <Card style={[styles.card, styles.flagCard]}>
+          <Card style={[styles.card, styles.flagCard]}>
               <View style={styles.flagHeader}>
                 <Ionicons name="warning" size={18} color={colors.danger} />
                 <Text style={styles.flagTitle}>Flagged as unusual</Text>
@@ -81,7 +76,7 @@ export default function TransactionDetailScreen() {
               )}
               <View style={styles.actionRow}>
                 <Pressable style={[styles.actionBtn, styles.safeBtn]} onPress={() => review('safe')}>
-                  <Ionicons name="checkmark" size={15} color={colors.bg} />
+                  <Ionicons name="checkmark" size={15} color={colors.onAccent} />
                   <Text style={styles.safeBtnText}>Mark as safe</Text>
                 </Pressable>
                 <Pressable style={[styles.actionBtn, styles.reportBtn]} onPress={() => review('fraud')}>
@@ -90,12 +85,10 @@ export default function TransactionDetailScreen() {
                 </Pressable>
               </View>
             </Card>
-          </Animated.View>
         )}
 
         {resolution !== 'none' && (
-          <Animated.View entering={FadeInDown.duration(300)}>
-            <Card style={[styles.card, styles.resolvedCard]}>
+          <Card style={[styles.card, styles.resolvedCard]}>
               <Ionicons
                 name={resolution === 'safe' ? 'checkmark-circle' : 'flag'}
                 size={18}
@@ -111,11 +104,9 @@ export default function TransactionDetailScreen() {
                     : 'Reported on this device. Connect the engine to have it excluded from your baseline.'}
               </Text>
             </Card>
-          </Animated.View>
         )}
 
-        <Animated.View entering={FadeInDown.delay(120).duration(400)}>
-          <Card style={styles.card}>
+        <Card style={styles.card}>
             <Text style={typography.h3}>Details</Text>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Category</Text>
@@ -134,22 +125,11 @@ export default function TransactionDetailScreen() {
               <Text style={styles.detailValue}>{params.id}</Text>
             </View>
           </Card>
-        </Animated.View>
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingTop: 0,
-    paddingBottom: spacing.xxl,
-  },
   heroWrap: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
@@ -228,7 +208,7 @@ const styles = StyleSheet.create({
   safeBtnText: {
     fontSize: 13,
     fontFamily: fontFamily.extraBold,
-    color: colors.bg,
+    color: colors.onAccent,
   },
   reportBtn: {
     backgroundColor: colors.danger + '1A',
