@@ -129,7 +129,7 @@ export default function ImportStatementScreen() {
       const parsed = parseExcelStatement(fileBytes, pwd || undefined);
 
       if (parsed.errors[0] === 'WRONG_PASSWORD') {
-        setPasswordError('Wrong password. Try your PAN number or date of birth (e.g. 01011990).');
+        setPasswordError('Wrong password. Please enter the correct password and try again.');
         setBusy(false);
         return;
       }
@@ -213,11 +213,9 @@ export default function ImportStatementScreen() {
               <View style={styles.pwdIconRow}>
                 <Ionicons name="lock-closed" size={22} color={colors.accent} />
               </View>
-              <Text style={styles.h3}>File password</Text>
+              <Text style={styles.h3}>This file is password protected</Text>
               <Text style={styles.note}>
-                This Excel file is password-protected. Banks usually use your {'\n'}
-                <Text style={styles.highlight}>PAN number</Text> (e.g. ABCDE1234F) or{' '}
-                <Text style={styles.highlight}>date of birth</Text> (e.g. 01011990) as the password.
+                Enter the password your bank set for this file.
               </Text>
 
               <Text style={styles.fileNameLabel}>
@@ -251,23 +249,6 @@ export default function ImportStatementScreen() {
                   <Text style={styles.errText}>{passwordError}</Text>
                 </View>
               ) : null}
-
-              {/* password hints */}
-              <View style={styles.hintBox}>
-                <Text style={styles.hintTitle}>Common bank passwords</Text>
-                {[
-                  ['HDFC', 'PAN number (uppercase, e.g. ABCDE1234F)'],
-                  ['SBI', 'Account number or date of birth (DDMMYYYY)'],
-                  ['ICICI', 'Date of birth (DDMMYYYY)'],
-                  ['Axis', 'Date of birth (DDMMYYYY) or PAN'],
-                  ['Kotak', 'Date of birth (DDMMYYYY)'],
-                ].map(([bank, hint]) => (
-                  <View key={bank} style={styles.hintRow}>
-                    <Text style={styles.hintBank}>{bank}</Text>
-                    <Text style={styles.hintText}>{hint}</Text>
-                  </View>
-                ))}
-              </View>
 
               <View style={styles.pwdActions}>
                 <Pressable style={styles.ghostBtn} onPress={reset}>
