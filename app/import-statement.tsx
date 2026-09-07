@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -7,148 +17,414 @@ import Card from '../components/Card';
 import DetailHeader from '../components/DetailHeader';
 import Screen from '../components/Screen';
 import { parseBankStatementCsv } from '../lib/bankStatementParser';
+import { parseExcelStatement } from '../lib/excelStatementParser';
 import { useImportedTransactions } from '../context/ImportedTransactionsContext';
 import { colors, fontFamily, radius, rupee, spacing } from '../constants/theme';
+import type { ParseResult } from '../lib/bankStatementParser';
 
-async function readPickedFile(asset: DocumentPicker.DocumentPickerAsset): Promise<string> {
+// ─── file reading helpers ────────────────────────────────────────────────────
+
+async function readAsText(asset: DocumentPicker.DocumentPickerAsset): Promise<string> {
   const file = (asset as { file?: File }).file;
-  if (file && typeof file.text === 'function') {
-    return file.text();
-  }
+  if (file && typeof file.text === 'function') return file.text();
   const res = await fetch(asset.uri);
   return res.text();
 }
 
+async function readAsBytes(asset: DocumentPicker.DocumentPickerAsset): Promise<Uint8Array> {
+  const file = (asset as { file?: File }).file;
+  if (file && typeof file.arrayBuffer === 'function') {
+    return new Uint8Array(await file.arrayBuffer());
+  }
+  const res = await fetch(asset.uri);
+  const buf = await res.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+function isExcel(name: string) {
+  const lower = name.toLowerCase();
+  return lower.endsWith('.xlsx') || lower.endsWith('.xls');
+}
+
+// ─── component ───────────────────────────────────────────────────────────────
+
+type Step = 'idle' | 'password' | 'parsed' | 'error';
+
 export default function ImportStatementScreen() {
   const { addImported } = useImportedTransactions();
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ReturnType<typeof parseBankStatementCsv> | null>(null);
 
+  const [step, setStep] = useState<Step>('idle');
+  const [busy, setBusy] = useState(false);
+
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
+  const [isExcelFile, setIsExcelFile] = useState(false);
+
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const [result, setResult] = useState<ParseResult | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  // ── pick file ──────────────────────────────────────────────────────────────
   const pickFile = async () => {
-    setError(null);
+    setParseError(null);
+    setPasswordError(null);
+    setResult(null);
+    setStep('idle');
     setBusy(true);
+
     try {
       const picked = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv', 'text/comma-separated-values', 'text/plain', '*/*'],
+        type: ['text/csv', 'text/comma-separated-values', 'text/plain',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '*/*'],
         copyToCacheDirectory: true,
       });
-      if (picked.canceled || !picked.assets?.[0]) {
+
+      if (picked.canceled || !picked.assets?.[0]) { setBusy(false); return; }
+
+      const asset = picked.assets[0];
+      setFileName(asset.name);
+
+      if (isExcel(asset.name)) {
+        // Excel — store bytes, then ask for password
+        const bytes = await readAsBytes(asset);
+        setFileBytes(bytes);
+        setIsExcelFile(true);
+        setPassword('');
+        setStep('password');
+        setBusy(false);
+      } else {
+        // CSV — parse immediately
+        setIsExcelFile(false);
+        setFileBytes(null);
+        const text = await readAsText(asset);
+        const parsed = parseBankStatementCsv(text);
+        if (parsed.rows.length === 0) {
+          setParseError(parsed.errors[0] ?? 'No rows could be read from this file.');
+          setStep('error');
+        } else {
+          setResult(parsed);
+          setStep('parsed');
+        }
+        setBusy(false);
+      }
+    } catch (e) {
+      setParseError(e instanceof Error ? e.message : 'Could not open the file.');
+      setStep('error');
+      setBusy(false);
+    }
+  };
+
+  // ── try opening Excel (with password) ─────────────────────────────────────
+  const tryParseExcel = async (pwd: string) => {
+    if (!fileBytes) return;
+    setPasswordError(null);
+    setBusy(true);
+
+    try {
+      const parsed = parseExcelStatement(fileBytes, pwd || undefined);
+
+      if (parsed.errors[0] === 'WRONG_PASSWORD') {
+        setPasswordError('Wrong password. Try your PAN number or date of birth (e.g. 01011990).');
         setBusy(false);
         return;
       }
-      const asset = picked.assets[0];
-      setFileName(asset.name);
-      const text = await readPickedFile(asset);
-      const parsed = parseBankStatementCsv(text);
-      setResult(parsed);
       if (parsed.rows.length === 0) {
-        setError(parsed.errors[0] ?? 'Could not read any rows from that file.');
+        setPasswordError(parsed.errors[0] ?? 'No transaction rows found in this file.');
+        setBusy(false);
+        return;
       }
+      setResult(parsed);
+      setStep('parsed');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open the file.');
+      setPasswordError(e instanceof Error ? e.message : 'Failed to parse file.');
     } finally {
       setBusy(false);
     }
   };
 
+  // ── import into books ──────────────────────────────────────────────────────
   const handleImport = () => {
     if (!result || result.rows.length === 0) return;
     addImported(result.rows);
     router.replace('/(tabs)/books');
   };
 
+  // ── reset ──────────────────────────────────────────────────────────────────
+  const reset = () => {
+    setStep('idle');
+    setFileName(null);
+    setFileBytes(null);
+    setResult(null);
+    setParseError(null);
+    setPasswordError(null);
+    setPassword('');
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <Screen>
       <DetailHeader title="Upload statement" />
 
-      <Pressable onPress={pickFile} disabled={busy}>
-        <Card elevated style={styles.drop}>
-          <View style={styles.dropIcon}>
-            <Ionicons name="document-attach-outline" size={26} color={colors.accent} />
-          </View>
-          <Text style={styles.h3}>{busy ? 'Reading…' : 'Choose a CSV file'}</Text>
-          <Text style={styles.note}>
-            From net banking: Account statement → Download CSV. We read Date, Narration, Debit and Credit columns.
-          </Text>
-          <View style={styles.uploadBtn}>
-            <Text style={styles.uploadBtnText}>Select file</Text>
-          </View>
-          {fileName ? <Text style={styles.fileName}>{fileName}</Text> : null}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </Card>
-      </Pressable>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-      {result && result.rows.length > 0 && (
-        <Card style={{ marginTop: spacing.lg }}>
-          <Text style={styles.h3}>Preview</Text>
-          <Text style={styles.previewMeta}>
-            {result.rows.length} rows · {result.skipped} skipped
-          </Text>
-          {result.rows.slice(0, 8).map((row) => (
-            <View key={row.id} style={styles.previewRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.previewMerchant} numberOfLines={1}>
-                  {row.merchant}
+          {/* ── file picker ── */}
+          {step === 'idle' || step === 'error' ? (
+            <Pressable onPress={pickFile} disabled={busy}>
+              <Card elevated style={styles.drop}>
+                <View style={styles.dropIcon}>
+                  {busy
+                    ? <ActivityIndicator color={colors.accent} size="large" />
+                    : <Ionicons name="document-attach-outline" size={30} color={colors.accent} />}
+                </View>
+                <Text style={styles.h3}>{busy ? 'Reading file…' : 'Choose a statement file'}</Text>
+                <Text style={styles.note}>
+                  Supports Excel (.xlsx, .xls) and CSV. Password-protected files are supported — you'll be asked to enter the password.
                 </Text>
-                <Text style={styles.previewDate}>
-                  {row.dateLabel} · {row.category}
-                </Text>
+
+                <View style={styles.formatRow}>
+                  <FormatBadge label="CSV" color={colors.income} />
+                  <FormatBadge label="XLSX" color={colors.accent} />
+                  <FormatBadge label="XLS" color={colors.accent} />
+                </View>
+
+                <View style={styles.uploadBtn}>
+                  <Text style={styles.uploadBtnText}>Select file</Text>
+                </View>
+
+                {step === 'error' && parseError ? (
+                  <View style={styles.errBox}>
+                    <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                    <Text style={styles.errText}>{parseError}</Text>
+                  </View>
+                ) : null}
+              </Card>
+            </Pressable>
+          ) : null}
+
+          {/* ── password prompt (Excel only) ── */}
+          {step === 'password' ? (
+            <Card elevated style={styles.pwdCard}>
+              <View style={styles.pwdIconRow}>
+                <Ionicons name="lock-closed" size={22} color={colors.accent} />
               </View>
-              <Text style={{ color: row.amount >= 0 ? colors.income : colors.expense, fontFamily: fontFamily.bold }}>
-                {rupee(row.amount, { signed: true })}
+              <Text style={styles.h3}>File password</Text>
+              <Text style={styles.note}>
+                This Excel file is password-protected. Banks usually use your {'\n'}
+                <Text style={styles.highlight}>PAN number</Text> (e.g. ABCDE1234F) or{' '}
+                <Text style={styles.highlight}>date of birth</Text> (e.g. 01011990) as the password.
               </Text>
-            </View>
-          ))}
-          <Pressable style={styles.importBtn} onPress={handleImport}>
-            <Text style={styles.importBtnText}>Import into books</Text>
-          </Pressable>
-        </Card>
-      )}
+
+              <Text style={styles.fileNameLabel}>
+                <Ionicons name="document" size={12} color={colors.textMuted} /> {fileName}
+              </Text>
+
+              <View style={styles.pwdRow}>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.pwdInput}
+                  onSubmitEditing={() => tryParseExcel(password)}
+                />
+                <Pressable style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
+
+              {passwordError ? (
+                <View style={styles.errBox}>
+                  <Ionicons name="alert-circle" size={14} color={colors.danger} />
+                  <Text style={styles.errText}>{passwordError}</Text>
+                </View>
+              ) : null}
+
+              {/* password hints */}
+              <View style={styles.hintBox}>
+                <Text style={styles.hintTitle}>Common bank passwords</Text>
+                {[
+                  ['HDFC', 'PAN number (uppercase, e.g. ABCDE1234F)'],
+                  ['SBI', 'Account number or date of birth (DDMMYYYY)'],
+                  ['ICICI', 'Date of birth (DDMMYYYY)'],
+                  ['Axis', 'Date of birth (DDMMYYYY) or PAN'],
+                  ['Kotak', 'Date of birth (DDMMYYYY)'],
+                ].map(([bank, hint]) => (
+                  <View key={bank} style={styles.hintRow}>
+                    <Text style={styles.hintBank}>{bank}</Text>
+                    <Text style={styles.hintText}>{hint}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.pwdActions}>
+                <Pressable style={styles.ghostBtn} onPress={reset}>
+                  <Text style={styles.ghostBtnText}>Change file</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.primaryBtn, busy && { opacity: 0.5 }]}
+                  onPress={() => tryParseExcel(password)}
+                  disabled={busy}
+                >
+                  {busy
+                    ? <ActivityIndicator color={colors.onAccent} size="small" />
+                    : <Text style={styles.primaryBtnText}>Open file</Text>}
+                </Pressable>
+              </View>
+
+              <Pressable onPress={() => tryParseExcel('')} style={styles.noPassLink}>
+                <Text style={styles.noPassText}>File has no password? Try without one</Text>
+              </Pressable>
+            </Card>
+          ) : null}
+
+          {/* ── parsed preview ── */}
+          {step === 'parsed' && result ? (
+            <Card elevated style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.income} />
+                <Text style={styles.previewTitle}>{result.rows.length} transactions found</Text>
+              </View>
+              {result.skipped > 0 ? (
+                <Text style={styles.skipped}>{result.skipped} rows skipped (blank or summary lines)</Text>
+              ) : null}
+
+              {result.rows.slice(0, 8).map((row) => (
+                <View key={row.id} style={styles.previewRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.previewMerchant} numberOfLines={1}>{row.merchant}</Text>
+                    <Text style={styles.previewDate}>{row.dateLabel} · {row.category}</Text>
+                  </View>
+                  <Text style={[styles.previewAmt, { color: row.amount >= 0 ? colors.income : colors.expense }]}>
+                    {rupee(row.amount, { signed: true })}
+                  </Text>
+                </View>
+              ))}
+
+              {result.rows.length > 8 ? (
+                <Text style={styles.more}>+ {result.rows.length - 8} more rows</Text>
+              ) : null}
+
+              <View style={styles.importActions}>
+                <Pressable style={styles.ghostBtn} onPress={reset}>
+                  <Text style={styles.ghostBtnText}>Choose different file</Text>
+                </Pressable>
+                <Pressable style={styles.primaryBtn} onPress={handleImport}>
+                  <Text style={styles.primaryBtnText}>Import into books</Text>
+                </Pressable>
+              </View>
+            </Card>
+          ) : null}
+
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
+function FormatBadge({ label, color }: { label: string; color: string }) {
+  return (
+    <View style={[styles.badge, { borderColor: color + '55', backgroundColor: color + '15' }]}>
+      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  drop: { alignItems: 'center', paddingVertical: spacing.xxl },
+  drop: { alignItems: 'center', paddingVertical: spacing.xl },
   dropIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 64, height: 64, borderRadius: 20,
     backgroundColor: colors.accent + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  h3: { fontSize: 16, fontFamily: fontFamily.semiBold, color: colors.textPrimary, textAlign: 'center' },
-  note: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 19, textAlign: 'center' },
+  h3: { fontSize: 16, fontFamily: fontFamily.bold, color: colors.textPrimary, marginBottom: 8 },
+  note: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, maxWidth: 300 },
+  formatRow: { flexDirection: 'row', gap: 8, marginTop: spacing.md, marginBottom: spacing.md },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, borderWidth: 1 },
+  badgeText: { fontSize: 11, fontFamily: fontFamily.bold },
   uploadBtn: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: radius.pill,
+    backgroundColor: colors.accent, borderRadius: radius.md,
+    paddingVertical: 12, paddingHorizontal: spacing.xl, marginTop: spacing.sm,
   },
-  uploadBtnText: { fontSize: 14, fontFamily: fontFamily.bold, color: colors.onAccent },
-  fileName: { marginTop: spacing.sm, fontSize: 12, color: colors.textMuted },
-  error: { marginTop: spacing.sm, fontSize: 13, color: colors.danger, textAlign: 'center' },
-  previewMeta: { fontSize: 12, color: colors.textMuted, marginTop: 6, marginBottom: spacing.sm },
+  uploadBtnText: { fontSize: 13, fontFamily: fontFamily.extraBold, color: colors.onAccent },
+  errBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: spacing.md, maxWidth: 300 },
+  errText: { flex: 1, fontSize: 12.5, color: colors.danger, lineHeight: 18 },
+
+  // password card
+  pwdCard: { gap: 0 },
+  pwdIconRow: {
+    width: 48, height: 48, borderRadius: 16,
+    backgroundColor: colors.accent + '18',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  highlight: { fontFamily: fontFamily.bold, color: colors.textPrimary },
+  fileNameLabel: { fontSize: 11, color: colors.textMuted, marginTop: spacing.sm, marginBottom: spacing.md },
+  pwdRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  pwdInput: {
+    flex: 1,
+    backgroundColor: colors.bgAlt, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, height: 50,
+    color: colors.textPrimary, fontSize: 14, fontFamily: fontFamily.medium,
+  },
+  eyeBtn: {
+    width: 50, height: 50, borderRadius: radius.md,
+    backgroundColor: colors.bgAlt, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  hintBox: {
+    marginTop: spacing.lg, backgroundColor: colors.bgAlt,
+    borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+  },
+  hintTitle: { fontSize: 11, fontFamily: fontFamily.bold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
+  hintRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  hintBank: { fontSize: 12, fontFamily: fontFamily.bold, color: colors.accent, width: 46 },
+  hintText: { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  pwdActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  noPassLink: { marginTop: spacing.md, alignItems: 'center' },
+  noPassText: { fontSize: 12, color: colors.textMuted, textDecorationLine: 'underline' },
+
+  // preview
+  previewCard: {},
+  previewHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  previewTitle: { fontSize: 16, fontFamily: fontFamily.bold, color: colors.textPrimary },
+  skipped: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.md },
   previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSoft,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   previewMerchant: { fontSize: 13, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
   previewDate: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  importBtn: {
-    marginTop: spacing.md,
-    backgroundColor: colors.accent,
-    paddingVertical: 14,
-    borderRadius: radius.md,
-    alignItems: 'center',
+  previewAmt: { fontSize: 13, fontFamily: fontFamily.bold },
+  more: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md },
+  importActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+
+  // shared buttons
+  ghostBtn: {
+    flex: 1, height: 48, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
-  importBtnText: { fontSize: 14, fontFamily: fontFamily.bold, color: colors.onAccent },
+  ghostBtnText: { fontSize: 13, fontFamily: fontFamily.semiBold, color: colors.textSecondary },
+  primaryBtn: {
+    flex: 1, height: 48, borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  primaryBtnText: { fontSize: 13, fontFamily: fontFamily.extraBold, color: colors.onAccent },
 });
