@@ -19,6 +19,8 @@ import Screen from '../components/Screen';
 import { parseBankStatementCsv } from '../lib/bankStatementParser';
 import { parseExcelStatement } from '../lib/excelStatementParser';
 import { useImportedTransactions } from '../context/ImportedTransactionsContext';
+import { useAuth } from '../context/AuthContext';
+import { BACKEND_URL } from '../lib/backendClient';
 import { colors, fontFamily, radius, rupee, spacing } from '../constants/theme';
 import type { ParseResult } from '../lib/bankStatementParser';
 
@@ -119,6 +121,8 @@ export default function ImportStatementScreen() {
     }
   };
 
+  const { token } = useAuth();
+
   // ── try opening Excel (with password) ─────────────────────────────────────
   const tryParseExcel = async (pwd: string) => {
     if (!fileBytes) return;
@@ -126,22 +130,50 @@ export default function ImportStatementScreen() {
     setBusy(true);
 
     try {
-      const parsed = parseExcelStatement(fileBytes, pwd || undefined);
+      let parsed: ParseResult;
 
-      if (parsed.errors[0] === 'WRONG_PASSWORD') {
+      // If backend is configured, send the file there to decrypt + parse
+      // (because React Native lacks the crypto keys to crack modern Excel files).
+      if (BACKEND_URL && token) {
+        const fd = new FormData();
+        const blob = new Blob([fileBytes as any], { type: 'application/octet-stream' });
+        fd.append('file', blob, fileName || 'statement.xlsx');
+        if (pwd) fd.append('password', pwd);
+
+        const res = await fetch(`${BACKEND_URL}/api/parse-statement`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Server error: ${res.status}`);
+        }
+        parsed = await res.json();
+      } else {
+        // Fallback: try parsing locally (only works for non-encrypted files)
+        parsed = parseExcelStatement(fileBytes, pwd || undefined);
+      }
+
+      if (parsed.errors && parsed.errors[0] === 'WRONG_PASSWORD') {
         setPasswordError('Wrong password. Please enter the correct password and try again.');
         setBusy(false);
         return;
       }
-      if (parsed.rows.length === 0) {
-        setPasswordError(parsed.errors[0] ?? 'No transaction rows found in this file.');
+      if (!parsed.rows || parsed.rows.length === 0) {
+        setPasswordError(parsed?.errors?.[0] ?? 'No transaction rows found in this file.');
         setBusy(false);
         return;
       }
       setResult(parsed);
       setStep('parsed');
-    } catch (e) {
-      setPasswordError(e instanceof Error ? e.message : 'Failed to parse file.');
+    } catch (e: any) {
+      if (e.message === 'WRONG_PASSWORD') {
+         setPasswordError('Wrong password. Please enter the correct password and try again.');
+      } else {
+         setPasswordError(e instanceof Error ? e.message : 'Failed to parse file.');
+      }
     } finally {
       setBusy(false);
     }

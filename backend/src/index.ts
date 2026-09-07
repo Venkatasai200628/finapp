@@ -28,8 +28,11 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dataSource: aaConfigured() ? 'account_aggregator' : 'simulator' });
 });
 
+import { statementRouter } from './routes/statement';
+
 app.use('/api', authRouter);
 app.use('/api', createTransactionsRouter(io));
+app.use('/api', statementRouter);
 
 // Manually trigger one demo event (the app's "Run" button in Settings).
 app.post('/api/simulate', requireAuth, (req: AuthedRequest, res) => {
