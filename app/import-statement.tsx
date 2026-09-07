@@ -59,6 +59,7 @@ export default function ImportStatementScreen() {
   const [busy, setBusy] = useState(false);
 
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileAsset, setFileAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [fileBytes, setFileBytes] = useState<Uint8Array | null>(null);
   const [isExcelFile, setIsExcelFile] = useState(false);
 
@@ -90,6 +91,7 @@ export default function ImportStatementScreen() {
 
       const asset = picked.assets[0];
       setFileName(asset.name);
+      setFileAsset(asset);
 
       if (isExcel(asset.name)) {
         // Excel — store bytes, then ask for password
@@ -102,6 +104,7 @@ export default function ImportStatementScreen() {
       } else {
         // CSV — parse immediately
         setIsExcelFile(false);
+        setFileAsset(null);
         setFileBytes(null);
         const text = await readAsText(asset);
         const parsed = parseBankStatementCsv(text);
@@ -134,10 +137,26 @@ export default function ImportStatementScreen() {
 
       // If backend is configured, send the file there to decrypt + parse
       // (because React Native lacks the crypto keys to crack modern Excel files).
-      if (BACKEND_URL && token) {
+      if (BACKEND_URL && token && fileAsset) {
         const fd = new FormData();
-        const blob = new Blob([fileBytes as any], { type: 'application/octet-stream' });
-        fd.append('file', blob, fileName || 'statement.xlsx');
+        
+        if (Platform.OS === 'web') {
+          const file = (fileAsset as any).file;
+          if (file) {
+            fd.append('file', file);
+          } else {
+            const blob = new Blob([fileBytes as any], { type: 'application/octet-stream' });
+            fd.append('file', blob, fileName || 'statement.xlsx');
+          }
+        } else {
+          // Native platforms (iOS/Android) use { uri, name, type } for FormData files
+          fd.append('file', {
+            uri: fileAsset.uri,
+            name: fileName || 'statement.xlsx',
+            type: fileAsset.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          } as any);
+        }
+
         if (pwd) fd.append('password', pwd);
 
         const res = await fetch(`${BACKEND_URL}/api/parse-statement`, {
@@ -190,6 +209,7 @@ export default function ImportStatementScreen() {
   const reset = () => {
     setStep('idle');
     setFileName(null);
+    setFileAsset(null);
     setFileBytes(null);
     setResult(null);
     setParseError(null);
