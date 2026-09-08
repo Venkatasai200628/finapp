@@ -53,9 +53,27 @@ export default function BooksScreen() {
       ) : (
         <>
           <View style={styles.statsRow}>
-            <StatCard label="Income" amount={ledger.totalIncome} color={colors.income} icon="arrow-down-circle" />
-            <StatCard label="Expense" amount={ledger.totalExpense} color={colors.expense} icon="arrow-up-circle" />
-            <StatCard label="Net" amount={ledger.netBalance} color={colors.savings} icon="swap-horizontal" />
+            <StatCard
+              label="Income"
+              amount={ledger.totalIncome}
+              color={colors.income}
+              icon="arrow-down-circle"
+              onPress={() => router.push({ pathname: '/transactions', params: { type: 'income' } })}
+            />
+            <StatCard
+              label="Expense"
+              amount={ledger.totalExpense}
+              color={colors.expense}
+              icon="arrow-up-circle"
+              onPress={() => router.push({ pathname: '/transactions', params: { type: 'expense' } })}
+            />
+            <StatCard
+              label="Net"
+              amount={ledger.netBalance}
+              color={colors.savings}
+              icon="swap-horizontal"
+              onPress={() => router.push('/transactions')}
+            />
           </View>
 
           <View style={styles.toolbar}>
@@ -67,7 +85,7 @@ export default function BooksScreen() {
 
           <ChartCard
             title="Spend by category"
-            hint="Bars scale to the largest category in this file."
+            hint="Bars scale to the largest category in this file. Tap a bar to filter."
             style={styles.card}
           >
             <CategoryBars items={ledger.expenseByCategory.map((c) => ({ label: c.category, amount: c.amount, color: CATEGORY_COLORS[c.category] ?? colors.expense }))} />
@@ -76,20 +94,20 @@ export default function BooksScreen() {
           <View style={[styles.partyRow, twoCol && styles.partyRowWide]}>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
               <Text style={styles.cardTitle}>Who you pay most</Text>
-              <Text style={styles.cardHint}>Tap any party to see all transactions with them.</Text>
+              <Text style={styles.cardHint}>Tap any party to see their transactions.</Text>
               {ledger.topPayees.length === 0 ? (
                 <Text style={styles.muted}>No outgoing payments.</Text>
               ) : (
-                ledger.topPayees.map((p) => <PartyRow key={p.party} party={p} mode="payee" />)
+                ledger.topPayees.slice(0, 4).map((p) => <PartyRow key={p.party} party={p} mode="payee" />)
               )}
             </Card>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
               <Text style={styles.cardTitle}>Who pays you</Text>
-              <Text style={styles.cardHint}>Tap any payer to see all deposits from them.</Text>
+              <Text style={styles.cardHint}>Tap any payer to see their deposits.</Text>
               {ledger.topPayers.length === 0 ? (
                 <Text style={styles.muted}>No incoming payments.</Text>
               ) : (
-                ledger.topPayers.map((p) => <PartyRow key={p.party} party={p} mode="payer" />)
+                ledger.topPayers.slice(0, 4).map((p) => <PartyRow key={p.party} party={p} mode="payer" />)
               )}
             </Card>
           </View>

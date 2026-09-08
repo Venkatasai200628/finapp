@@ -47,7 +47,10 @@ function press(navigation: BottomTabBarProps['navigation'], route: { key: string
   }
 }
 
+import { useTheme } from '../context/ThemeContext';
+
 function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
+  const { theme, toggleTheme, phoneView, togglePhoneView } = useTheme();
   const insets = useSafeAreaInsets();
   const routes = visibleRoutes(state);
   const itemHeight = 50;
@@ -103,6 +106,19 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
       </View>
 
       <View style={sidebarStyles.footer}>
+        <View style={sidebarStyles.controlsRow}>
+          <Pressable onPress={togglePhoneView} style={[sidebarStyles.toolBtn, phoneView && sidebarStyles.toolBtnActive]}>
+            <Ionicons name={phoneView ? 'phone-portrait' : 'phone-portrait-outline'} size={15} color={phoneView ? colors.onAccent : colors.accent} />
+            <Text style={[sidebarStyles.toolBtnText, phoneView && sidebarStyles.toolBtnActiveText]}>
+              {phoneView ? 'Phone View' : 'Phone View'}
+            </Text>
+          </Pressable>
+
+          <Pressable onPress={toggleTheme} style={sidebarStyles.themeBtn}>
+            <Ionicons name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={16} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+
         <Text style={sidebarStyles.footerText}>Statement-backed numbers.{'\n'}Nothing is invented for you.</Text>
       </View>
     </View>
@@ -242,6 +258,48 @@ const sidebarStyles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  toolBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceAlt,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toolBtnActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  toolBtnText: {
+    fontSize: 11,
+    fontFamily: fontFamily.semiBold,
+    color: colors.textPrimary,
+  },
+  toolBtnActiveText: {
+    color: colors.onAccent,
+    fontFamily: fontFamily.bold,
+  },
+  themeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footerText: {
     fontSize: 11,

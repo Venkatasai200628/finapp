@@ -12,10 +12,10 @@ import { fontFamily, colors, radius, spacing } from '../constants/theme';
 import { useLocalSearchParams } from 'expo-router';
 import { useImportedTransactions } from '../context/ImportedTransactionsContext';
 
-const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Transfer', 'Uncategorized'];
+const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Trading', 'Transfer', 'Uncategorized'];
 
 export default function TransactionsScreen() {
-  const params = useLocalSearchParams<{ search?: string; cat?: string }>();
+  const params = useLocalSearchParams<{ search?: string; cat?: string; type?: string }>();
   const { imported } = useImportedTransactions();
   const [query, setQuery] = useState(params.search ? String(params.search) : '');
   const [category, setCategory] = useState(params.cat ? String(params.cat) : 'All');
@@ -28,16 +28,23 @@ export default function TransactionsScreen() {
       amount: tx.amount,
       time: tx.dateLabel,
       flagged: false,
+      rawDescription: tx.rawDescription,
     }));
   }, [imported]);
 
   const filtered = useMemo(() => {
     return all.filter((tx) => {
+      // If type filter passed (income / expense)
+      if (params.type === 'income' && tx.amount < 0) return false;
+      if (params.type === 'expense' && tx.amount >= 0) return false;
+
       const matchesCategory = category === 'All' || tx.category === category;
-      const matchesQuery = tx.merchant.toLowerCase().includes(query.trim().toLowerCase());
+      const matchesQuery =
+        tx.merchant.toLowerCase().includes(query.trim().toLowerCase()) ||
+        (tx.rawDescription && tx.rawDescription.toLowerCase().includes(query.trim().toLowerCase()));
       return matchesCategory && matchesQuery;
     });
-  }, [query, category, all]);
+  }, [query, category, all, params.type]);
 
   return (
     <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, maxWidth: undefined }}>

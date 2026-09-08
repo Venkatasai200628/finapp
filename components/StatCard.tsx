@@ -10,6 +10,7 @@ type Props = {
   icon: keyof typeof Ionicons.glyphMap;
   delay?: number;
   showChange?: boolean;
+  onPress?: () => void;
 };
 
 export default function StatCard({
@@ -19,10 +20,11 @@ export default function StatCard({
   color,
   icon,
   showChange = false,
+  onPress,
 }: Props) {
   const isUp = changePct >= 0;
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       <View style={[styles.accent, { backgroundColor: color }]} />
       <View style={styles.top}>
         <View style={[styles.iconWrap, { backgroundColor: color + '24' }]}>
@@ -41,8 +43,21 @@ export default function StatCard({
       <Text style={styles.amount} numberOfLines={1}>
         {rupee(Math.round(amount))}
       </Text>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.card, pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] }]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.card}>{content}</View>;
 }
 
 const styles = StyleSheet.create({

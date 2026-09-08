@@ -15,8 +15,10 @@ const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   Transport: 'car',
   Subscription: 'play-circle',
   Income: 'trending-up',
-  Uncategorized: 'help-circle',
+  Transfer: 'swap-horizontal',
+  Trading: 'trending-up',
   Shopping: 'bag',
+  Uncategorized: 'help-circle',
 };
 
 export default function TransactionDetailScreen() {

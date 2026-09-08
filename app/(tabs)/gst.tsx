@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../../components/Card';
 import Screen from '../../components/Screen';
 import SectionHeader from '../../components/SectionHeader';
-import { adviseGstReduction, computeGstLine, computeGstSummary, type GstItem } from '../../lib/gstCalculator';
+import {
+  adviseGstReduction,
+  computeGstLine,
+  computeGstSummary,
+  type GstItem,
+  type ReductionStrategy,
+} from '../../lib/gstCalculator';
 import { useResponsive } from '../../hooks/useResponsive';
 import { colors, fontFamily, radius, rupee, spacing } from '../../constants/theme';
 
@@ -26,6 +32,15 @@ export default function GstScreen() {
   const [name, setName] = useState('');
   const [bill, setBill] = useState<GstItem[]>([]);
   const [targetIdeal, setTargetIdeal] = useState('');
+  const [strategy, setStrategy] = useState<ReductionStrategy>('equal');
+
+  // Edit item state
+  const [editingItem, setEditingItem] = useState<GstItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editQty, setEditQty] = useState('1');
+  const [editRate, setEditRate] = useState(18);
+  const [editInclusive, setEditInclusive] = useState(false);
 
   const draft: GstItem = {
     id: 'draft',
@@ -38,7 +53,7 @@ export default function GstScreen() {
   const preview = parseNum(price) > 0 ? computeGstLine(draft) : null;
   const summary = useMemo(() => computeGstSummary(bill), [bill]);
   const target = parseNum(targetIdeal);
-  const advice = useMemo(() => adviseGstReduction(summary, target), [summary, target]);
+  const advice = useMemo(() => adviseGstReduction(summary, target, strategy), [summary, target, strategy]);
 
   const addLine = () => {
     if (parseNum(price) <= 0) return;
@@ -51,11 +66,58 @@ export default function GstScreen() {
         unitPrice: parseNum(price),
         gstRate: rate,
         inclusive,
+        fixed: false,
       },
     ]);
     setPrice('');
     setName('');
     setQty('1');
+  };
+
+  const toggleFix = (id: string) => {
+    setBill((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, fixed: !item.fixed } : item))
+    );
+  };
+
+  const startEdit = (item: GstItem) => {
+    if (item.fixed) {
+      alert('This line is locked (fixed). Unlock it first if you want to edit it.');
+      return;
+    }
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditPrice(String(item.unitPrice));
+    setEditQty(String(item.quantity));
+    setEditRate(item.gstRate);
+    setEditInclusive(item.inclusive);
+  };
+
+  const saveEdit = () => {
+    if (!editingItem) return;
+    setBill((prev) =>
+      prev.map((item) =>
+        item.id === editingItem.id
+          ? {
+              ...item,
+              name: editName.trim() || item.name,
+              quantity: parseNum(editQty) || 1,
+              unitPrice: parseNum(editPrice),
+              gstRate: editRate,
+              inclusive: editInclusive,
+            }
+          : item
+      )
+    );
+    setEditingItem(null);
+  };
+
+  const cycleStrategy = () => {
+    setStrategy((s) => {
+      if (s === 'equal') return 'proportional';
+      if (s === 'proportional') return 'highest_first';
+      return 'equal';
+    });
   };
 
   const calculator = (
@@ -152,27 +214,55 @@ export default function GstScreen() {
         ) : (
           <>
             <View style={styles.tableHead}>
-              <Text style={[styles.th, { flex: 1.2 }]}>Item</Text>
+              <Text style={[styles.th, { flex: 1.2 }]}>Item (tap to edit)</Text>
               <Text style={[styles.th, styles.numCol]}>Qty</Text>
               <Text style={[styles.th, styles.amtCol]}>After</Text>
+              <Text style={[styles.th, { width: 50, textAlign: 'center' }]}>Lock</Text>
             </View>
-            {summary.lines.map((line, i) => (
-              <View key={line.id} style={styles.tableRow}>
-                <View style={{ flex: 1.2 }}>
-                  <Text style={styles.tdName}>{line.name}</Text>
-                  <Text style={styles.tdMeta}>
-                    {line.gstRate}% · {money(line.baseAmount)} + {money(line.gstAmount)}
-                  </Text>
-                </View>
-                <Text style={[styles.td, styles.numCol]}>{line.quantity}</Text>
-                <View style={styles.afterCell}>
-                  <Text style={styles.tdBold}>{money(line.totalAmount)}</Text>
-                  <Pressable onPress={() => setBill((p) => p.filter((_, idx) => idx !== i))} hitSlop={8}>
-                    <Ionicons name="close" size={14} color={colors.textMuted} />
+            {summary.lines.map((line, i) => {
+              const rawItem = bill.find((b) => b.id === line.id) || bill[i];
+              const isFixed = rawItem?.fixed;
+              return (
+                <View key={line.id} style={[styles.tableRow, isFixed && styles.tableRowFixed]}>
+                  <Pressable
+                    style={{ flex: 1.2 }}
+                    onPress={() => rawItem && startEdit(rawItem)}
+                    hitSlop={4}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.tdName, isFixed && { color: colors.warn }]}>{line.name}</Text>
+                      {isFixed && (
+                        <View style={styles.fixedBadge}>
+                          <Text style={styles.fixedBadgeText}>Fixed</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.tdMeta}>
+                      {line.gstRate}% · {money(line.baseAmount)} + {money(line.gstAmount)}
+                    </Text>
                   </Pressable>
+
+                  <Text style={[styles.td, styles.numCol]}>{line.quantity}</Text>
+
+                  <View style={styles.afterCell}>
+                    <Text style={styles.tdBold}>{money(line.totalAmount)}</Text>
+                    <Pressable onPress={() => setBill((p) => p.filter((_, idx) => idx !== i))} hitSlop={8}>
+                      <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+
+                  <View style={{ width: 50, alignItems: 'center', justifyContent: 'center' }}>
+                    <Pressable onPress={() => toggleFix(line.id)} hitSlop={8} style={styles.lockBtn}>
+                      <Ionicons
+                        name={isFixed ? 'lock-closed' : 'lock-open-outline'}
+                        size={16}
+                        color={isFixed ? colors.warn : colors.textMuted}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
             <View style={styles.totals}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Before GST</Text>
@@ -193,8 +283,18 @@ export default function GstScreen() {
 
       {bill.length > 0 && (
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Target cap (optional)</Text>
-          <Text style={styles.hint}>If the bill is over this, the cut is split equally across every line.</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.cardTitle}>Target cap (optional)</Text>
+            {target > 0 && (
+              <Pressable onPress={cycleStrategy} style={styles.strategyBtn}>
+                <Ionicons name="shuffle" size={13} color={colors.accent} />
+                <Text style={styles.strategyBtnText}>Try different split</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={styles.hint}>
+            Locks prevent items from being reduced. Use "Try different split" to toggle equal, proportional, or highest-first reduction.
+          </Text>
           <TextInput
             value={targetIdeal}
             onChangeText={setTargetIdeal}
@@ -204,21 +304,114 @@ export default function GstScreen() {
             style={styles.input}
           />
           {target > 0 && (
-            <Text style={[styles.advice, advice.exceedsTarget ? styles.adviceWarn : styles.adviceOk]}>
-              {advice.message}
-            </Text>
+            <View style={styles.adviceWrap}>
+              <View style={styles.strategyBadge}>
+                <Text style={styles.strategyBadgeText}>{advice.strategyLabel}</Text>
+              </View>
+              <Text style={[styles.advice, advice.exceedsTarget ? styles.adviceWarn : styles.adviceOk]}>
+                {advice.message}
+              </Text>
+            </View>
           )}
           {advice.exceedsTarget &&
             advice.suggestedLines.map((line) => (
               <View key={line.id} style={styles.cutRow}>
-                <Text style={styles.cutName}>{line.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.cutName, line.isFixed && { color: colors.warn }]}>{line.name}</Text>
+                  {line.isFixed && (
+                    <View style={styles.fixedBadge}>
+                      <Text style={styles.fixedBadgeText}>Locked · No cut</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.cutMeta}>
-                  {money(line.totalAmount)} → {money(line.reducedTotal)} (−{money(line.savedAmount)})
+                  {line.isFixed
+                    ? `${money(line.totalAmount)} (Kept fixed)`
+                    : `${money(line.totalAmount)} → ${money(line.reducedTotal)} (−${money(line.savedAmount)})`}
                 </Text>
               </View>
             ))}
         </Card>
       )}
+
+      {/* Edit Line Item Modal */}
+      <Modal
+        visible={!!editingItem}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingItem(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Bill Item</Text>
+              <Pressable onPress={() => setEditingItem(null)} hitSlop={10}>
+                <Ionicons name="close-circle" size={24} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.field}>Item Name</Text>
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              style={styles.input}
+              placeholder="e.g. game, rout"
+              placeholderTextColor={colors.textMuted}
+            />
+
+            <View style={[styles.row, { marginTop: spacing.sm }]}>
+              <View style={{ width: 90 }}>
+                <Text style={styles.field}>Quantity</Text>
+                <TextInput
+                  value={editQty}
+                  onChangeText={setEditQty}
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.field}>{editInclusive ? 'Price (incl. GST)' : 'Price (excl. GST)'}</Text>
+                <TextInput
+                  value={editPrice}
+                  onChangeText={setEditPrice}
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <Text style={[styles.field, { marginTop: spacing.sm }]}>GST Rate</Text>
+            <View style={styles.rateRow}>
+              {[0, 5, 12, 18, 28].map((r) => (
+                <Pressable
+                  key={r}
+                  onPress={() => setEditRate(r)}
+                  style={[styles.rateSmall, editRate === r && styles.rateOn]}
+                >
+                  <Text style={[styles.rateSmallText, editRate === r && styles.rateOnText]}>{r}%</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Pressable style={styles.check} onPress={() => setEditInclusive((v) => !v)}>
+              <Ionicons name={editInclusive ? 'checkbox' : 'square-outline'} size={20} color={colors.accent} />
+              <Text style={styles.checkText}>Price already includes GST</Text>
+            </Pressable>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg }}>
+              <Pressable
+                style={[styles.modalBtn, { flex: 1, backgroundColor: colors.surfaceAlt }]}
+                onPress={() => setEditingItem(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.textSecondary }]}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.modalBtn, { flex: 1 }]} onPress={saveEdit}>
+                <Text style={styles.modalBtnText}>Save changes</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -357,4 +550,98 @@ const styles = StyleSheet.create({
   cutRow: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSoft },
   cutName: { fontSize: 13, fontFamily: fontFamily.semiBold, color: colors.textPrimary },
   cutMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  tableRowFixed: {
+    backgroundColor: 'rgba(255, 179, 0, 0.05)',
+  },
+  fixedBadge: {
+    backgroundColor: colors.warn + '22',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  fixedBadgeText: {
+    fontSize: 9,
+    fontFamily: fontFamily.bold,
+    color: colors.warn,
+  },
+  lockBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  strategyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.accent + '1A',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.accent + '44',
+  },
+  strategyBtnText: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    color: colors.accent,
+  },
+  adviceWrap: {
+    marginTop: spacing.sm,
+    gap: 6,
+  },
+  strategyBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  strategyBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  modalBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBtnText: {
+    color: colors.onAccent,
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+  },
 });

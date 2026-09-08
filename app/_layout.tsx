@@ -66,6 +66,8 @@ function AuthGate() {
   );
 }
 
+import { ThemeProvider } from '../context/ThemeContext';
+
 export default function RootLayout() {
   const [fontsApplied, setFontsApplied] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
@@ -84,8 +86,23 @@ export default function RootLayout() {
       if (Platform.OS === 'web') {
         const style = document.createElement('style');
         style.textContent = `
-          * { font-family: 'Outfit_400Regular', sans-serif !important; }
-          h1, h2, h3, strong { font-family: 'Outfit_600SemiBold', sans-serif !important; }
+          @font-face {
+            font-family: 'Ionicons';
+            src: url('https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/fonts/ionicons.ttf') format('truetype');
+          }
+          html, body, #root {
+            font-family: 'Outfit_400Regular', sans-serif;
+          }
+          /* Apply Outfit to text inputs and standard containers */
+          input, textarea, button {
+            font-family: 'Outfit_400Regular', sans-serif;
+          }
+          /* Crucial: preserve Ionicons font family for vector icons */
+          [style*="font-family: Ionicons"],
+          [style*="font-family: 'Ionicons'"],
+          [style*='font-family: "Ionicons"'] {
+            font-family: Ionicons !important;
+          }
         `;
         document.head.appendChild(style);
       }
@@ -99,20 +116,22 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <MobileWebBlocker>
-        <AuthProvider>
-          <SettingsProvider>
-            <GoalsProvider>
-              <BudgetsProvider>
-                <ImportedTransactionsProvider>
-                  <StatusBar style="light" />
-                  <AuthGate />
-                </ImportedTransactionsProvider>
-              </BudgetsProvider>
-            </GoalsProvider>
-          </SettingsProvider>
-        </AuthProvider>
-      </MobileWebBlocker>
+      <ThemeProvider>
+        <MobileWebBlocker>
+          <AuthProvider>
+            <SettingsProvider>
+              <GoalsProvider>
+                <BudgetsProvider>
+                  <ImportedTransactionsProvider>
+                    <StatusBar style="light" />
+                    <AuthGate />
+                  </ImportedTransactionsProvider>
+                </BudgetsProvider>
+              </GoalsProvider>
+            </SettingsProvider>
+          </AuthProvider>
+        </MobileWebBlocker>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

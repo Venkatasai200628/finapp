@@ -105,6 +105,9 @@ export function extractMerchantAndCategory(rawDesc: string): { merchant: string;
   if (/^Google\s*P$/i.test(merchant) || /playstore/i.test(text)) {
     merchant = 'Google Play';
   }
+  if (/sopanam/i.test(merchant) || /sopanam/i.test(text)) {
+    merchant = 'Sopanam Canteen';
+  }
   if (merchant === merchant.toUpperCase() && merchant.length > 2) {
     merchant = merchant
       .toLowerCase()
@@ -118,6 +121,8 @@ export function extractMerchantAndCategory(rawDesc: string): { merchant: string;
 
   if (/salary|sal cr|payroll|stipend|interest cr/.test(combined)) {
     category = 'Income';
+  } else if (/trading|zerodha|groww|upstox|angel|demat|nse|bse|stocks|shares|sharekhan|motilal|mutual\s*fund|sip\b/.test(combined)) {
+    category = 'Trading';
   } else if (/sopanam|canteen|food|swiggy|zomato|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen|mess|tiffin|tea|coffee|hotel|biryani|sweets/.test(combined)) {
     category = 'Food';
   } else if (/gym|fitness|workout|revive|cult|crossfit|yoga|netflix|spotify|prime|hotstar|youtube|subscription|autopay|nach|apy|emi|loan|insurance|lic|playstore|google play/.test(combined)) {

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Card from '../../components/Card';
 import CategoryDonut from '../../components/CategoryDonut';
@@ -24,6 +25,9 @@ import { colors, fontFamily, radius, rupee, spacing } from '../../constants/them
 export default function HomeScreen() {
   const { imported } = useImportedTransactions();
   const { twoCol, contentWidth } = useResponsive();
+  const [savingsModalVisible, setSavingsModalVisible] = useState(false);
+  const [moneyWentModalVisible, setMoneyWentModalVisible] = useState(false);
+
   const inner = Math.max(220, contentWidth - 32);
   const chartWidth = inner;
   const halfWidth = Math.max(200, twoCol ? (contentWidth - 16) / 2 - 32 : inner);
@@ -47,7 +51,32 @@ export default function HomeScreen() {
     amount: tx.amount,
     time: tx.dateLabel,
     flagged: false,
+    rawDescription: tx.rawDescription,
   }));
+
+  // Top large spends
+  const largeDebits = useMemo(() => {
+    return imported
+      .filter((t) => t.amount < 0)
+      .sort((a, b) => a.amount - b.amount)
+      .slice(0, 6);
+  }, [imported]);
+
+  // Spends grouped by user / merchant
+  const topMerchants = useMemo(() => {
+    const map = new Map<string, { total: number; count: number }>();
+    for (const t of imported) {
+      if (t.amount < 0) {
+        const m = t.merchant || 'Other';
+        const cur = map.get(m) ?? { total: 0, count: 0 };
+        map.set(m, { total: cur.total + Math.abs(t.amount), count: cur.count + 1 });
+      }
+    }
+    return [...map.entries()]
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
+  }, [imported]);
 
   return (
     <Screen>
@@ -99,6 +128,7 @@ export default function HomeScreen() {
               icon="arrow-down-circle"
               showChange={!!monthly}
               changePct={monthly?.incomeChangePct ?? 0}
+              onPress={() => router.push({ pathname: '/transactions', params: { type: 'income' } })}
             />
             <StatCard
               label="Expense"
@@ -107,6 +137,7 @@ export default function HomeScreen() {
               icon="arrow-up-circle"
               showChange={!!monthly}
               changePct={monthly?.expenseChangePct ?? 0}
+              onPress={() => router.push({ pathname: '/transactions', params: { type: 'expense' } })}
             />
             <StatCard
               label="Savings"
@@ -115,6 +146,7 @@ export default function HomeScreen() {
               icon="wallet"
               showChange={!!monthly}
               changePct={monthly?.savingsChangePct ?? 0}
+              onPress={() => setSavingsModalVisible(true)}
             />
           </View>
 
@@ -145,14 +177,183 @@ export default function HomeScreen() {
             >
               <MonthlyTrendChart data={trend} width={halfWidth} />
             </ChartCard>
-            <ChartCard
-              title="Where money went"
-              hint="Category mix for this statement."
+
+            <Pressable
               style={[styles.plotCard, twoCol && styles.plotCardWide]}
+              onPress={() => setMoneyWentModalVisible(true)}
             >
-              <CategoryDonut data={categories} size={twoCol ? 148 : 160} />
-            </ChartCard>
+              <ChartCard
+                title="Where money went"
+                hint="Tap for large spends & top recipient breakdown."
+                style={{ marginBottom: 0 }}
+              >
+                <CategoryDonut data={categories} size={twoCol ? 148 : 160} />
+                <View style={styles.tapPrompt}>
+                  <Text style={styles.tapPromptText}>Tap to see large expenses & merchants</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+                </View>
+              </ChartCard>
+            </Pressable>
           </View>
+
+          {/* Savings Calculation Modal */}
+          <Modal
+            visible={savingsModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSavingsModalVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Savings Calculation</Text>
+                  <Pressable onPress={() => setSavingsModalVisible(false)} hitSlop={10}>
+                    <Ionicons name="close-circle" size={24} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+
+                <Text style={styles.modalSubtitle}>How your monthly net savings is derived from your statement:</Text>
+
+                <View style={styles.calcBox}>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcLabel}>Total Income (Credits)</Text>
+                    <Text style={[styles.calcValue, { color: colors.income }]}>
+                      +{rupee(Math.round(monthly?.income ?? 0))}
+                    </Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcLabel}>Total Expense (Debits)</Text>
+                    <Text style={[styles.calcValue, { color: colors.expense }]}>
+                      −{rupee(Math.round(monthly?.expense ?? 0))}
+                    </Text>
+                  </View>
+                  <View style={[styles.calcRow, styles.calcDivider]}>
+                    <Text style={styles.calcTotalLabel}>Net Savings</Text>
+                    <Text style={styles.calcTotalValue}>
+                      {rupee(Math.round(monthly?.savings ?? 0), { signed: true })}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.rateCard}>
+                  <Text style={styles.rateCardLabel}>Savings Rate Formula</Text>
+                  <Text style={styles.rateCardFormula}>
+                    (₹{Math.round(monthly?.savings ?? 0).toLocaleString()} ÷ ₹{Math.round(monthly?.income ?? 1).toLocaleString()}) × 100
+                  </Text>
+                  <Text style={styles.rateCardResult}>
+                    = {monthly?.savingsRate ?? 0}% retained
+                  </Text>
+                  <Text style={styles.rateAdvice}>
+                    {(monthly?.savingsRate ?? 0) >= 20
+                      ? '🌟 Healthy savings rate! You exceed the standard 20% savings rule.'
+                      : '💡 Aim to retain at least 20% of your income for emergencies and investments.'}
+                  </Text>
+                </View>
+
+                <Pressable
+                  style={styles.modalBtn}
+                  onPress={() => {
+                    setSavingsModalVisible(false);
+                    router.push('/transactions');
+                  }}
+                >
+                  <Text style={styles.modalBtnText}>View all statement records</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Where Money Went Breakdown Modal */}
+          <Modal
+            visible={moneyWentModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setMoneyWentModalVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={[styles.modalCard, { maxHeight: '85%' }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Where Money Went</Text>
+                  <Pressable onPress={() => setMoneyWentModalVisible(false)} hitSlop={10}>
+                    <Ionicons name="close-circle" size={24} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <Text style={styles.modalSubtitle}>
+                    Overview of who received your money and your largest purchases:
+                  </Text>
+
+                  <Text style={styles.sectionHeading}>Top Spenders / Merchants</Text>
+                  {topMerchants.map((m, idx) => (
+                    <Pressable
+                      key={m.name}
+                      style={styles.breakdownRow}
+                      onPress={() => {
+                        setMoneyWentModalVisible(false);
+                        router.push({ pathname: '/transactions', params: { search: m.name } });
+                      }}
+                    >
+                      <View style={styles.rankBadge}>
+                        <Text style={styles.rankText}>#{idx + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.breakdownName}>{m.name}</Text>
+                        <Text style={styles.breakdownMeta}>{m.count} transaction{m.count === 1 ? '' : 's'}</Text>
+                      </View>
+                      <Text style={styles.breakdownAmt}>−{rupee(Math.round(m.total))}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
+                    </Pressable>
+                  ))}
+
+                  <Text style={[styles.sectionHeading, { marginTop: spacing.lg }]}>Largest Outgoing Payments</Text>
+                  {largeDebits.map((tx) => (
+                    <Pressable
+                      key={tx.id}
+                      style={styles.breakdownRow}
+                      onPress={() => {
+                        setMoneyWentModalVisible(false);
+                        router.push({
+                          pathname: '/transaction/[id]',
+                          params: {
+                            id: tx.id,
+                            merchant: tx.merchant,
+                            category: tx.category,
+                            amount: String(tx.amount),
+                            time: tx.dateLabel,
+                            rawDescription: tx.rawDescription,
+                            flagged: '0',
+                          },
+                        });
+                      }}
+                    >
+                      <View style={[styles.rankBadge, { backgroundColor: colors.expense + '22' }]}>
+                        <Ionicons name="arrow-up" size={12} color={colors.expense} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.breakdownName}>{tx.merchant}</Text>
+                        <Text style={styles.breakdownMeta}>{tx.dateLabel} · {tx.category}</Text>
+                      </View>
+                      <Text style={[styles.breakdownAmt, { color: colors.expense }]}>
+                        {rupee(tx.amount, { signed: true })}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <Pressable
+                  style={[styles.modalBtn, { marginTop: spacing.md }]}
+                  onPress={() => {
+                    setMoneyWentModalVisible(false);
+                    router.push({ pathname: '/transactions', params: { type: 'expense' } });
+                  }}
+                >
+                  <Text style={styles.modalBtnText}>View all expense transactions</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
 
           <SectionHeader title="Recent" action="See all" onAction={() => router.push('/transactions')} />
           <Card style={styles.txCard}>
@@ -243,4 +444,176 @@ const styles = StyleSheet.create({
   ok: { fontSize: 13, color: colors.income, marginTop: 10 },
   muted: { fontSize: 13, color: colors.textMuted },
   txCard: { paddingVertical: 4, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  tapPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+  },
+  tapPromptText: {
+    fontSize: 11,
+    fontFamily: fontFamily.semiBold,
+    color: colors.accent,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  calcBox: {
+    backgroundColor: colors.bgAlt,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  calcLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  calcValue: {
+    fontSize: 14,
+    fontFamily: fontFamily.bold,
+  },
+  calcDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginTop: 6,
+    paddingTop: 8,
+  },
+  calcTotalLabel: {
+    fontSize: 14,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  calcTotalValue: {
+    fontSize: 16,
+    fontFamily: fontFamily.extraBold,
+    color: colors.savings,
+  },
+  rateCard: {
+    backgroundColor: colors.savings + '18',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.savings + '44',
+  },
+  rateCardLabel: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    color: colors.savings,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  rateCardFormula: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  rateCardResult: {
+    fontSize: 16,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  rateAdvice: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  modalBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBtnText: {
+    color: colors.onAccent,
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+  },
+  sectionHeading: {
+    fontSize: 12,
+    fontFamily: fontFamily.bold,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+  },
+  rankBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  rankText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
+    color: colors.textMuted,
+  },
+  breakdownName: {
+    fontSize: 13,
+    fontFamily: fontFamily.semiBold,
+    color: colors.textPrimary,
+  },
+  breakdownMeta: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  breakdownAmt: {
+    fontSize: 13,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
 });

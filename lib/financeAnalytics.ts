@@ -214,6 +214,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Shopping: '#33D6A6',
   Income: '#10b981',
   Transfer: '#5B6B82',
+  Trading: '#00E5FF',
   Uncategorized: '#5B6B82',
   Other: '#5B6B82',
 };
