@@ -1,21 +1,37 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import type { PartySummary } from '../lib/ledgerAnalytics';
 import { colors, fontFamily, radius, rupee, spacing } from '../constants/theme';
 
 type Props = {
   party: PartySummary;
   mode: 'payee' | 'payer' | 'all';
+  onPress?: () => void;
 };
 
-export default function PartyRow({ party, mode }: Props) {
+export default function PartyRow({ party, mode, onPress }: Props) {
   const primary =
     mode === 'payee' ? party.paidOut : mode === 'payer' ? party.received : party.totalVolume;
   const primaryLabel = mode === 'payee' ? 'Paid out' : mode === 'payer' ? 'Received' : 'Volume';
   const primaryColor = mode === 'payer' ? colors.income : colors.expense;
 
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push({
+        pathname: '/transactions',
+        params: { search: party.party },
+      });
+    }
+  };
+
   return (
-    <View style={styles.row}>
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7, backgroundColor: colors.surfaceAlt }]}
+      onPress={handlePress}
+    >
       <View style={styles.left}>
         <View style={[styles.avatar, { backgroundColor: primaryColor + '22' }]}>
           <Text style={[styles.avatarText, { color: primaryColor }]}>{party.party.charAt(0).toUpperCase()}</Text>
@@ -39,9 +55,12 @@ export default function PartyRow({ party, mode }: Props) {
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, { color: primaryColor }]}>{rupee(Math.round(primary))}</Text>
-        <Text style={styles.amountLabel}>{primaryLabel}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+          <Text style={styles.amountLabel}>{primaryLabel}</Text>
+          <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

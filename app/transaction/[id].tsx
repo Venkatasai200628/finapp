@@ -27,6 +27,7 @@ export default function TransactionDetailScreen() {
     amount: string;
     time: string;
     flagged: string;
+    rawDescription?: string;
     reasons?: string;
   }>();
 
@@ -124,6 +125,12 @@ export default function TransactionDetailScreen() {
               <Text style={styles.detailLabel}>Transaction ID</Text>
               <Text style={styles.detailValue}>{params.id}</Text>
             </View>
+            {params.rawDescription ? (
+              <View style={[styles.detailRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
+                <Text style={styles.detailLabel}>Bank narration</Text>
+                <Text style={[styles.detailValue, { fontSize: 12, color: colors.textSecondary }]}>{params.rawDescription}</Text>
+              </View>
+            ) : null}
           </Card>
     </Screen>
   );

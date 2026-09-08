@@ -9,14 +9,16 @@ import Screen from '../components/Screen';
 import TransactionRow from '../components/TransactionRow';
 import { Transaction } from '../data/mockData';
 import { fontFamily, colors, radius, spacing } from '../constants/theme';
+import { useLocalSearchParams } from 'expo-router';
 import { useImportedTransactions } from '../context/ImportedTransactionsContext';
 
-const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Uncategorized'];
+const CATEGORIES = ['All', 'Food', 'Groceries', 'Transport', 'Subscription', 'Shopping', 'Income', 'Transfer', 'Uncategorized'];
 
 export default function TransactionsScreen() {
+  const params = useLocalSearchParams<{ search?: string; cat?: string }>();
   const { imported } = useImportedTransactions();
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All');
+  const [query, setQuery] = useState(params.search ? String(params.search) : '');
+  const [category, setCategory] = useState(params.cat ? String(params.cat) : 'All');
 
   const all: Transaction[] = useMemo(() => {
     return imported.map((tx) => ({

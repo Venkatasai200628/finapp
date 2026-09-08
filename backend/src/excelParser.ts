@@ -43,71 +43,119 @@ function toNumber(raw: unknown): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-function extractMerchant(desc: string): string {
-  const d = desc.toUpperCase();
+function extractMerchantAndCategory(rawDesc: string): { merchant: string; category: string } {
+  const text = String(rawDesc || '').trim();
+  const upper = text.toUpperCase();
 
-  // 1. UPI Transfers
-  // Format: UPI/P2A/1234567890/SURAJ KUMAR/Paytm OR UPI/12345/Name
-  if (d.startsWith('UPI')) {
-    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
-    // Often, the 3rd or 4th part is the name. Let's look for the first part that isn't numeric/generic
-    const ignoreList = ['UPI', 'P2M', 'P2A', 'P2P', 'INT', 'REV', 'RETURN'];
-    for (let i = 1; i < parts.length; i++) {
-      const p = parts[i];
-      if (!p || p.length < 3) continue;
-      if (ignoreList.includes(p)) continue;
-      if (/^\d+$/.test(p)) continue; // ignore pure numbers (txn IDs)
-      if (p.startsWith('UTR')) continue;
-      // Likely the name!
-      // Return title cased
-      return p.replace(/\b\w/g, c => c.toUpperCase());
+  let merchant = '';
+  let upiHandle = '';
+
+  // 1. Indian UPI formats:
+  // Examples:
+  // DEP TFR   UPI/CR/373153462446/Google P/utib/playstore1/UPI 0097733162090 AT 00858 KAVALI
+  // WDL TFR   UPI/DR/661047468230/RAVULA N/UBIN/8885607939/Paid 0097691162095 AT 00858 KAVALI
+  // WDL TFR   UPI/DR/967579383914/REVIVE GYM/KARB/reviverame/Pa 0097691162095 AT 00858 KAVALI
+  // WDL TFR   UPI/DR/661052542923/SOPANAM /YESB/paytm.s1bj/Paid 0097691162095 AT 00858 KAVALI
+  const upiMatch = text.match(/UPI[/-](?:CR|DR|P2A|P2M|P2P)[/-]([A-Za-z0-9]+)[/-]([^/]+)(?:[/-]([^/]+))?(?:[/-]([^/]+))?/i);
+  if (upiMatch) {
+    merchant = upiMatch[2]?.trim() || '';
+    upiHandle = (upiMatch[4] || upiMatch[3] || '').trim();
+  } else {
+    // UPI with RRN first: UPI/123456789012/Merchant/Bank...
+    const upiSimple = text.match(/UPI[/-]([A-Za-z0-9]{8,16})[/-]([^/]+)/i);
+    if (upiSimple) {
+      merchant = upiSimple[2]?.trim() || '';
+    } else {
+      // Any general UPI occurrence
+      const upiIndex = upper.indexOf('UPI');
+      if (upiIndex !== -1) {
+        const parts = text.slice(upiIndex).split(/[/|\-@]/).map((p) => p.trim());
+        const ignore = ['UPI', 'CR', 'DR', 'P2A', 'P2M', 'P2P', 'INT', 'REV', 'RETURN', 'PAID', 'PAY'];
+        for (let i = 1; i < parts.length; i++) {
+          const p = parts[i];
+          if (p.length >= 3 && !ignore.includes(p.toUpperCase()) && !/^\d+$/.test(p) && !p.toUpperCase().startsWith('UTR')) {
+            merchant = p;
+            break;
+          }
+        }
+      }
     }
   }
 
   // 2. NEFT / IMPS / RTGS
-  // Format: NEFT DR-PUNB0123456-RAHUL KUMAR-NETBANKING
-  if (d.includes('NEFT') || d.includes('IMPS') || d.includes('RTGS')) {
-    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
-    for (let i = 1; i < parts.length; i++) {
+  if (!merchant && (upper.includes('NEFT') || upper.includes('IMPS') || upper.includes('RTGS'))) {
+    const parts = text.split(/[/|\-@_]/).map((p) => p.trim());
+    for (let i = 0; i < parts.length; i++) {
       const p = parts[i];
-      if (!p || p.length < 3) continue;
-      if (/^\d+$/.test(p)) continue;
-      if (p.includes('NEFT') || p.includes('IMPS') || p.includes('RTGS')) continue;
-      if (/^[A-Z]{4}0[A-Z0-9]{6}$/.test(p)) continue; // ignore IFSC
-      if (p === 'NETBANKING' || p === 'FT') continue;
-      return p.replace(/\b\w/g, c => c.toUpperCase());
+      if (
+        p.length >= 3 &&
+        !/^\d+$/.test(p) &&
+        !/^(NEFT|IMPS|RTGS|DR|CR|NETBANKING|FT|WDL|DEP|TFR)$/i.test(p) &&
+        !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(p)
+      ) {
+        merchant = p;
+        break;
+      }
     }
   }
 
-  // 3. Autopay / NACH / Subscriptions
-  if (d.includes('ACH') || d.includes('NACH') || d.includes('APY') || d.includes('AUTOPAY') || d.includes('BILLDESK')) {
-    if (d.includes('APY')) return 'Atal Pension Yojana (APY)';
-    if (d.includes('SIP') || d.includes('MUTUAL')) return 'Mutual Fund SIP';
-    const parts = d.split(/[/|\-@_]/).map((p) => p.trim());
-    return parts.length > 1 ? parts[1].replace(/\b\w/g, c => c.toUpperCase()) : 'Autopay';
+  // 3. Autopay / NACH / APY / Subscriptions
+  if (!merchant && (upper.includes('APY') || upper.includes('NACH') || upper.includes('ACH') || upper.includes('AUTOPAY'))) {
+    if (upper.includes('APY')) {
+      merchant = 'Atal Pension Yojana (APY)';
+    } else if (upper.includes('SIP') || upper.includes('MUTUAL')) {
+      merchant = 'Mutual Fund SIP';
+    } else {
+      merchant = 'Bank Autopay';
+    }
   }
 
-  // 4. Fallback: split and clean
-  const fallback = d.split(/[/|\-@]/)[0].trim();
-  // Strip trailing numbers/generics
-  const cleaned = fallback.replace(/\s+\d+$/, '').replace(/^(POS|ECOM|WDL|DEP|TFR|TRF)\b\s*/, '').trim();
-  return cleaned.replace(/\b\w/g, c => c.toUpperCase()) || 'Bank Entry';
-}
+  // 4. Fallback cleanup: strip leading DEP TFR / WDL TFR / POS / ECOM
+  if (!merchant) {
+    let cleaned = text
+      .replace(/^(DEP|WDL|TO|BY)\s+(TFR|TRANSFER)\s*/i, '')
+      .replace(/^(POS|ECOM|TRF|TRANSFER)\s*/i, '')
+      .split(/[/|@\-_\n]/)[0]
+      .trim();
+    cleaned = cleaned.replace(/\s+\d+.*$/, '').trim();
+    merchant = cleaned || 'Bank Entry';
+  }
 
-function guessCategory(merchant: string, description: string): string {
-  const d = String(description).toLowerCase();
-  const m = String(merchant).toLowerCase();
-  const combined = `${m} ${d}`;
+  // Strip trailing bank noise and extra spaces
+  merchant = merchant.replace(/\s+/g, ' ').trim();
+  if (/^Google\s*P$/i.test(merchant) || /playstore/i.test(text)) {
+    merchant = 'Google Play';
+  }
+  // Convert ALL CAPS to Clean Title Case
+  if (merchant === merchant.toUpperCase() && merchant.length > 2) {
+    merchant = merchant
+      .toLowerCase()
+      .split(' ')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
 
-  if (/salary|sal cr|payroll|stipend/.test(combined)) return 'Income';
-  if (/swiggy|zomato|food|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen|canteen/.test(combined)) return 'Food';
-  if (/amazon|flipkart|myntra|shopping|shopee|mart|store|retail|apparel|clothing/.test(combined)) return 'Shopping';
-  if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air/.test(combined)) return 'Transport';
-  if (/netflix|spotify|subscription|prime|hotstar|youtube|autopay|nach|apy|emi|loan|insurance|gym|fitness/.test(combined)) return 'Subscription';
-  if (/grocery|dmart|bigbasket|bazaar|supermarket|kirana|spencers|reliance fresh/.test(combined)) return 'Groceries';
-  if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash/.test(combined)) return 'Transfer';
-  
-  return 'Uncategorized';
+  // Category determination
+  const combined = `${merchant} ${text} ${upiHandle}`.toLowerCase();
+  let category = 'Uncategorized';
+
+  if (/salary|sal cr|payroll|stipend|interest cr/.test(combined)) {
+    category = 'Income';
+  } else if (/sopanam|canteen|food|swiggy|zomato|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen|mess|tiffin|tea|coffee|hotel|biryani|sweets/.test(combined)) {
+    category = 'Food';
+  } else if (/gym|fitness|workout|revive|cult|crossfit|yoga|netflix|spotify|prime|hotstar|youtube|subscription|autopay|nach|apy|emi|loan|insurance|lic|playstore|google play/.test(combined)) {
+    category = 'Subscription';
+  } else if (/grocery|dmart|bigbasket|bazaar|supermarket|kirana|spencers|reliance fresh|provision|vegetable|fruits|milk|dairy/.test(combined)) {
+    category = 'Groceries';
+  } else if (/amazon|flipkart|myntra|shopee|mart|store|retail|apparel|clothing|shoes|fashion|stationery|fancy|mall|electronics/.test(combined)) {
+    category = 'Shopping';
+  } else if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air|indigo|railway/.test(combined)) {
+    category = 'Transport';
+  } else if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash|ravula|prasada|balakris/.test(combined)) {
+    category = 'Transfer';
+  }
+
+  return { merchant, category };
 }
 
 type ColumnMap = {
@@ -250,11 +298,11 @@ export function parseExcelStatementNode(data: Buffer): ParseResult {
     }
 
     const ts = parseIndianDate(dateRaw) ?? Date.now();
-    const merchant = extractMerchant(desc);
+    const { merchant, category } = extractMerchantAndCategory(desc);
     rows.push({
       id: `xl-${i}-${ts}`,
       merchant,
-      category: guessCategory(merchant, desc),
+      category,
       amount,
       timestamp: ts,
       source: 'bank_statement',

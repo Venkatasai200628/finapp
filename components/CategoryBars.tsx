@@ -1,14 +1,34 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { colors, fontFamily, radius, rupee, spacing } from '../constants/theme';
 
 type Item = { label: string; amount: number; color?: string };
 
-export default function CategoryBars({ items, color = colors.expense }: { items: Item[]; color?: string }) {
+export default function CategoryBars({
+  items,
+  color = colors.expense,
+  onPressCategory,
+}: {
+  items: Item[];
+  color?: string;
+  onPressCategory?: (category: string) => void;
+}) {
   const max = Math.max(...items.map((i) => i.amount), 1);
   const sum = items.reduce((s, i) => s + i.amount, 0) || 1;
   if (items.length === 0) {
     return <Text style={styles.empty}>Nothing to chart yet.</Text>;
   }
+
+  const handlePress = (label: string) => {
+    if (onPressCategory) {
+      onPressCategory(label);
+    } else {
+      router.push({
+        pathname: '/transactions',
+        params: { cat: label },
+      });
+    }
+  };
 
   return (
     <View style={styles.wrap}>
@@ -16,7 +36,11 @@ export default function CategoryBars({ items, color = colors.expense }: { items:
         const pct = Math.max((item.amount / max) * 100, 6);
         const share = Math.round((item.amount / sum) * 100);
         return (
-          <View key={item.label} style={styles.row}>
+          <Pressable
+            key={item.label}
+            style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+            onPress={() => handlePress(item.label)}
+          >
             <View style={styles.meta}>
               <Text style={styles.label} numberOfLines={1}>
                 {item.label}
@@ -29,7 +53,7 @@ export default function CategoryBars({ items, color = colors.expense }: { items:
             <View style={styles.track}>
               <View style={[styles.fill, { width: `${pct}%`, backgroundColor: item.color ?? color }]} />
             </View>
-          </View>
+          </Pressable>
         );
       })}
     </View>

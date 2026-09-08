@@ -10,6 +10,7 @@ import PartyRow from '../../components/PartyRow';
 import Screen from '../../components/Screen';
 import SectionHeader from '../../components/SectionHeader';
 import StatCard from '../../components/StatCard';
+import TransactionRow from '../../components/TransactionRow';
 import { buildLedgerOverview } from '../../lib/ledgerAnalytics';
 import { CATEGORY_COLORS } from '../../lib/financeAnalytics';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
@@ -75,6 +76,7 @@ export default function BooksScreen() {
           <View style={[styles.partyRow, twoCol && styles.partyRowWide]}>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
               <Text style={styles.cardTitle}>Who you pay most</Text>
+              <Text style={styles.cardHint}>Tap any party to see all transactions with them.</Text>
               {ledger.topPayees.length === 0 ? (
                 <Text style={styles.muted}>No outgoing payments.</Text>
               ) : (
@@ -83,6 +85,7 @@ export default function BooksScreen() {
             </Card>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
               <Text style={styles.cardTitle}>Who pays you</Text>
+              <Text style={styles.cardHint}>Tap any payer to see all deposits from them.</Text>
               {ledger.topPayers.length === 0 ? (
                 <Text style={styles.muted}>No incoming payments.</Text>
               ) : (
@@ -90,6 +93,41 @@ export default function BooksScreen() {
               )}
             </Card>
           </View>
+
+          <SectionHeader
+            title={`All transactions (${imported.length})`}
+            action="Full screen"
+            onAction={() => router.push('/transactions')}
+          />
+          <Card style={styles.txCard}>
+            {imported.map((tx) => (
+              <TransactionRow
+                key={tx.id}
+                tx={{
+                  id: tx.id,
+                  merchant: tx.merchant,
+                  category: tx.category,
+                  amount: tx.amount,
+                  time: tx.dateLabel,
+                  flagged: false,
+                }}
+                onPress={() =>
+                  router.push({
+                    pathname: '/transaction/[id]',
+                    params: {
+                      id: tx.id,
+                      merchant: tx.merchant,
+                      category: tx.category,
+                      amount: String(tx.amount),
+                      time: tx.dateLabel,
+                      rawDescription: tx.rawDescription,
+                      flagged: '0',
+                    },
+                  })
+                }
+              />
+            ))}
+          </Card>
         </>
       )}
     </Screen>
@@ -134,9 +172,11 @@ const styles = StyleSheet.create({
   clearText: { fontSize: 12, color: colors.expense, fontFamily: fontFamily.semiBold },
   card: { marginBottom: spacing.lg },
   cardTitle: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary, marginBottom: 4 },
+  cardHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
   muted: { fontSize: 13, color: colors.textMuted, marginTop: spacing.sm },
   partyRow: { gap: spacing.lg, marginBottom: spacing.lg },
   partyRowWide: { flexDirection: 'row', alignItems: 'flex-start' },
   partyCard: { marginBottom: 0 },
   partyCardWide: { flex: 1 },
+  txCard: { paddingVertical: 4, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
 });
