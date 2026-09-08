@@ -166,7 +166,7 @@ export default function ImportStatementScreen() {
           // broken fetch FormData polyfills
           const uploadResult = await FileSystem.uploadAsync(`${BACKEND_URL}/api/parse-statement`, fileAsset.uri, {
              httpMethod: 'POST',
-             uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+             uploadType: 1 /* MULTIPART */,
              fieldName: 'file',
              headers: { Authorization: `Bearer ${token}` },
              parameters: pwd ? { password: pwd } : {},
