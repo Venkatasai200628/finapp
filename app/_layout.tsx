@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text, TextInput } from 'react-native';
+import { Platform, Text, TextInput } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -78,6 +78,16 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       applyDefaultFont();
+      
+      if (Platform.OS === 'web') {
+        const style = document.createElement('style');
+        style.textContent = `
+          * { font-family: 'Outfit_400Regular', sans-serif !important; }
+          h1, h2, h3, strong { font-family: 'Outfit_600SemiBold', sans-serif !important; }
+        `;
+        document.head.appendChild(style);
+      }
+
       setFontsApplied(true);
       SplashScreen.hideAsync().catch(() => {});
     }

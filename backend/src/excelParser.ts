@@ -43,15 +43,70 @@ function toNumber(raw: unknown): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-function guessCategory(description: string): string {
+function extractMerchant(desc: string): string {
+  const d = desc.toUpperCase();
+
+  // 1. UPI Transfers
+  // Format: UPI/P2A/1234567890/SURAJ KUMAR/Paytm OR UPI/12345/Name
+  if (d.startsWith('UPI')) {
+    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
+    // Often, the 3rd or 4th part is the name. Let's look for the first part that isn't numeric/generic
+    const ignoreList = ['UPI', 'P2M', 'P2A', 'P2P', 'INT', 'REV', 'RETURN'];
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (!p || p.length < 3) continue;
+      if (ignoreList.includes(p)) continue;
+      if (/^\d+$/.test(p)) continue; // ignore pure numbers (txn IDs)
+      if (p.startsWith('UTR')) continue;
+      // Likely the name!
+      // Return title cased
+      return p.replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+
+  // 2. NEFT / IMPS / RTGS
+  // Format: NEFT DR-PUNB0123456-RAHUL KUMAR-NETBANKING
+  if (d.includes('NEFT') || d.includes('IMPS') || d.includes('RTGS')) {
+    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (!p || p.length < 3) continue;
+      if (/^\d+$/.test(p)) continue;
+      if (p.includes('NEFT') || p.includes('IMPS') || p.includes('RTGS')) continue;
+      if (/^[A-Z]{4}0[A-Z0-9]{6}$/.test(p)) continue; // ignore IFSC
+      if (p === 'NETBANKING' || p === 'FT') continue;
+      return p.replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+
+  // 3. Autopay / NACH / Subscriptions
+  if (d.includes('ACH') || d.includes('NACH') || d.includes('APY') || d.includes('AUTOPAY') || d.includes('BILLDESK')) {
+    if (d.includes('APY')) return 'Atal Pension Yojana (APY)';
+    if (d.includes('SIP') || d.includes('MUTUAL')) return 'Mutual Fund SIP';
+    const parts = d.split(/[/|\-@_]/).map((p) => p.trim());
+    return parts.length > 1 ? parts[1].replace(/\b\w/g, c => c.toUpperCase()) : 'Autopay';
+  }
+
+  // 4. Fallback: split and clean
+  const fallback = d.split(/[/|\-@]/)[0].trim();
+  // Strip trailing numbers/generics
+  const cleaned = fallback.replace(/\s+\d+$/, '').replace(/^(POS|ECOM|WDL|DEP|TFR|TRF)\b\s*/, '').trim();
+  return cleaned.replace(/\b\w/g, c => c.toUpperCase()) || 'Bank Entry';
+}
+
+function guessCategory(merchant: string, description: string): string {
   const d = String(description).toLowerCase();
-  if (/salary|sal cr|payroll/.test(d)) return 'Income';
-  if (/swiggy|zomato|food|restaurant/.test(d)) return 'Food';
-  if (/amazon|flipkart|myntra|shopping/.test(d)) return 'Shopping';
-  if (/uber|ola|petrol|fuel|irctc/.test(d)) return 'Transport';
-  if (/netflix|spotify|subscription/.test(d)) return 'Subscription';
-  if (/grocery|dmart|bigbasket|bazaar/.test(d)) return 'Groceries';
-  if (/upi|neft|imps|rtgs|transfer|trf/.test(d)) return 'Transfer';
+  const m = String(merchant).toLowerCase();
+  const combined = `${m} ${d}`;
+
+  if (/salary|sal cr|payroll|stipend/.test(combined)) return 'Income';
+  if (/swiggy|zomato|food|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen/.test(combined)) return 'Food';
+  if (/amazon|flipkart|myntra|shopping|shopee|mart|store|retail|apparel|clothing/.test(combined)) return 'Shopping';
+  if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air/.test(combined)) return 'Transport';
+  if (/netflix|spotify|subscription|prime|hotstar|youtube|autopay|nach|apy|emi|loan|insurance/.test(combined)) return 'Subscription';
+  if (/grocery|dmart|bigbasket|bazaar|supermarket|kirana|spencers|reliance fresh/.test(combined)) return 'Groceries';
+  if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash/.test(combined)) return 'Transfer';
+  
   return 'Uncategorized';
 }
 
@@ -195,11 +250,11 @@ export function parseExcelStatementNode(data: Buffer): ParseResult {
     }
 
     const ts = parseIndianDate(dateRaw) ?? Date.now();
-    const merchant = desc.split(/[/|@]/)[0].trim().slice(0, 60) || 'Bank entry';
+    const merchant = extractMerchant(desc);
     rows.push({
       id: `xl-${i}-${ts}`,
       merchant,
-      category: guessCategory(desc),
+      category: guessCategory(merchant, desc),
       amount,
       timestamp: ts,
       source: 'bank_statement',

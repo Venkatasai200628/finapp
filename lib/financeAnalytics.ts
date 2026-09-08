@@ -62,15 +62,16 @@ export function predictCashFlow(
 
   let income = 0;
   let expense = 0;
-  for (const tx of recent.length >= 3 ? recent : sorted) {
+  for (const tx of sorted) {
     const abs = Math.abs(tx.amount);
     if (isIncome(tx)) income += abs;
     else expense += abs;
   }
 
-  const spanDays = Math.max(1, recent.length >= 3
-    ? (now - Math.min(...recent.map((t) => t.timestamp!))) / (24 * 60 * 60 * 1000)
-    : (now - sorted[0].timestamp!) / (24 * 60 * 60 * 1000));
+  const latestTxTs = Math.max(...sorted.map(t => t.timestamp!));
+  const earliestTxTs = Math.min(...sorted.map(t => t.timestamp!));
+  // Use at least 30 days to avoid crazy daily burn rates from small imports
+  const spanDays = Math.max(30, (latestTxTs - earliestTxTs) / (24 * 60 * 60 * 1000));
 
   const dailyIncome = income / spanDays;
   const dailyExpense = expense / spanDays;

@@ -30,15 +30,60 @@ function toNumber(raw: string): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-function guessCategory(description: string): string {
-  const d = description.toLowerCase();
-  if (/salary|sal cr|payroll/.test(d)) return 'Income';
-  if (/swiggy|zomato|food|restaurant/.test(d)) return 'Food';
-  if (/amazon|flipkart|myntra|shopping/.test(d)) return 'Shopping';
-  if (/uber|ola|petrol|fuel|irctc/.test(d)) return 'Transport';
-  if (/netflix|spotify|subscription/.test(d)) return 'Subscription';
-  if (/grocery|dmart|bigbasket|bazaar/.test(d)) return 'Groceries';
-  if (/upi|neft|imps|rtgs|transfer|trf/.test(d)) return 'Transfer';
+export function extractMerchant(desc: string): string {
+  const d = desc.toUpperCase();
+
+  if (d.startsWith('UPI')) {
+    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
+    const ignoreList = ['UPI', 'P2M', 'P2A', 'P2P', 'INT', 'REV', 'RETURN'];
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (!p || p.length < 3) continue;
+      if (ignoreList.includes(p)) continue;
+      if (/^\d+$/.test(p)) continue;
+      if (p.startsWith('UTR')) continue;
+      return p.replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+
+  if (d.includes('NEFT') || d.includes('IMPS') || d.includes('RTGS')) {
+    const parts = d.split(/[/|\-@]/).map((p) => p.trim());
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      if (!p || p.length < 3) continue;
+      if (/^\d+$/.test(p)) continue;
+      if (p.includes('NEFT') || p.includes('IMPS') || p.includes('RTGS')) continue;
+      if (/^[A-Z]{4}0[A-Z0-9]{6}$/.test(p)) continue;
+      if (p === 'NETBANKING' || p === 'FT') continue;
+      return p.replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+
+  if (d.includes('ACH') || d.includes('NACH') || d.includes('APY') || d.includes('AUTOPAY') || d.includes('BILLDESK')) {
+    if (d.includes('APY')) return 'Atal Pension Yojana (APY)';
+    if (d.includes('SIP') || d.includes('MUTUAL')) return 'Mutual Fund SIP';
+    const parts = d.split(/[/|\-@_]/).map((p) => p.trim());
+    return parts.length > 1 ? parts[1].replace(/\b\w/g, c => c.toUpperCase()) : 'Autopay';
+  }
+
+  const fallback = d.split(/[/|\-@]/)[0].trim();
+  const cleaned = fallback.replace(/\s+\d+$/, '').replace(/^(POS|ECOM|WDL|DEP|TFR|TRF)\b\s*/, '').trim();
+  return cleaned.replace(/\b\w/g, c => c.toUpperCase()) || 'Bank Entry';
+}
+
+function guessCategory(merchant: string, description: string): string {
+  const d = String(description).toLowerCase();
+  const m = String(merchant).toLowerCase();
+  const combined = `${m} ${d}`;
+
+  if (/salary|sal cr|payroll|stipend/.test(combined)) return 'Income';
+  if (/swiggy|zomato|food|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen/.test(combined)) return 'Food';
+  if (/amazon|flipkart|myntra|shopping|shopee|mart|store|retail|apparel|clothing/.test(combined)) return 'Shopping';
+  if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air/.test(combined)) return 'Transport';
+  if (/netflix|spotify|subscription|prime|hotstar|youtube|autopay|nach|apy|emi|loan|insurance/.test(combined)) return 'Subscription';
+  if (/grocery|dmart|bigbasket|bazaar|supermarket|kirana|spencers|reliance fresh/.test(combined)) return 'Groceries';
+  if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash/.test(combined)) return 'Transfer';
+  
   return 'Uncategorized';
 }
 
@@ -155,11 +200,11 @@ export function parseBankStatementCsv(text: string): ParseResult {
     }
 
     const ts = parseIndianDate(dateRaw) ?? Date.now();
-    const merchant = desc.split(/[/|@]/)[0].trim().slice(0, 60) || 'Bank entry';
+    const merchant = extractMerchant(desc);
     rows.push({
       id: `import-${i}-${ts}`,
       merchant,
-      category: guessCategory(desc),
+      category: guessCategory(merchant, desc),
       amount,
       timestamp: ts,
       source: 'bank_statement',
