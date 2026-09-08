@@ -100,10 +100,10 @@ function guessCategory(merchant: string, description: string): string {
   const combined = `${m} ${d}`;
 
   if (/salary|sal cr|payroll|stipend/.test(combined)) return 'Income';
-  if (/swiggy|zomato|food|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen/.test(combined)) return 'Food';
+  if (/swiggy|zomato|food|restaurant|cafe|bakery|eats|dhaba|bhoj|pizza|burger|kitchen|canteen/.test(combined)) return 'Food';
   if (/amazon|flipkart|myntra|shopping|shopee|mart|store|retail|apparel|clothing/.test(combined)) return 'Shopping';
   if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air/.test(combined)) return 'Transport';
-  if (/netflix|spotify|subscription|prime|hotstar|youtube|autopay|nach|apy|emi|loan|insurance/.test(combined)) return 'Subscription';
+  if (/netflix|spotify|subscription|prime|hotstar|youtube|autopay|nach|apy|emi|loan|insurance|gym|fitness/.test(combined)) return 'Subscription';
   if (/grocery|dmart|bigbasket|bazaar|supermarket|kirana|spencers|reliance fresh/.test(combined)) return 'Groceries';
   if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash/.test(combined)) return 'Transfer';
   

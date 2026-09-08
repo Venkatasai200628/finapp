@@ -12,6 +12,7 @@ import {
   Outfit_700Bold,
   Outfit_800ExtraBold,
 } from '@expo-google-fonts/outfit';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
 import { GoalsProvider } from '../context/GoalsContext';
@@ -73,6 +74,7 @@ export default function RootLayout() {
     Outfit_600SemiBold,
     Outfit_700Bold,
     Outfit_800ExtraBold,
+    ...Ionicons.font,
   });
 
   useEffect(() => {

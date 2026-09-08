@@ -11,6 +11,7 @@ import Screen from '../../components/Screen';
 import SectionHeader from '../../components/SectionHeader';
 import StatCard from '../../components/StatCard';
 import { buildLedgerOverview } from '../../lib/ledgerAnalytics';
+import { CATEGORY_COLORS } from '../../lib/financeAnalytics';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { colors, fontFamily, radius, shadow, spacing } from '../../constants/theme';
@@ -68,7 +69,7 @@ export default function BooksScreen() {
             hint="Bars scale to the largest category in this file."
             style={styles.card}
           >
-            <CategoryBars items={ledger.expenseByCategory.map((c) => ({ label: c.category, amount: c.amount }))} />
+            <CategoryBars items={ledger.expenseByCategory.map((c) => ({ label: c.category, amount: c.amount, color: CATEGORY_COLORS[c.category] ?? colors.expense }))} />
           </ChartCard>
 
           <View style={[styles.partyRow, twoCol && styles.partyRowWide]}>

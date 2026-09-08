@@ -204,7 +204,7 @@ export function computeMonthlyTrend(transactions: TxPoint[]): MonthlyTrendPoint[
 
 export type CategorySpend = { category: string; amount: number; color: string };
 
-const CATEGORY_COLORS: Record<string, string> = {
+export const CATEGORY_COLORS: Record<string, string> = {
   Food: '#FF6B6B',
   'Food & Dining': '#FF6B6B',
   Groceries: '#FFB454',
