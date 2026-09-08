@@ -13,7 +13,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import Card from '../components/Card';
 import DetailHeader from '../components/DetailHeader';
 import Screen from '../components/Screen';
@@ -162,21 +161,26 @@ export default function ImportStatementScreen() {
           }
           parsed = await res.json();
         } else {
-          // Native platforms (iOS/Android): use expo-file-system to completely bypass React Native's
-          // broken fetch FormData polyfills
-          const uploadResult = await FileSystem.uploadAsync(`${BACKEND_URL}/api/parse-statement`, fileAsset.uri, {
-             httpMethod: 'POST',
-             uploadType: 1 /* MULTIPART */,
-             fieldName: 'file',
-             headers: { Authorization: `Bearer ${token}` },
-             parameters: pwd ? { password: pwd } : {},
-          });
+          // Native platforms (iOS/Android): use legacy expo-file-system uploadAsync
+          try {
+            const LegacyFS = require('expo-file-system/legacy');
+            const uploadResult = await LegacyFS.uploadAsync(`${BACKEND_URL}/api/parse-statement`, fileAsset.uri, {
+               httpMethod: 'POST',
+               uploadType: 1 /* MULTIPART */,
+               fieldName: 'file',
+               headers: { Authorization: `Bearer ${token}` },
+               parameters: pwd ? { password: pwd } : {},
+            });
 
-          if (uploadResult.status !== 200) {
-            const data = JSON.parse(uploadResult.body);
-            throw new Error(data.error || `Server error: ${uploadResult.status}`);
+            if (uploadResult.status !== 200) {
+              const data = JSON.parse(uploadResult.body);
+              throw new Error(data.error || `Server error: ${uploadResult.status}`);
+            }
+            parsed = JSON.parse(uploadResult.body);
+          } catch (nativeErr: any) {
+            // If native upload fails or module not found, fallback to local parser
+            parsed = parseExcelStatement(fileBytes, pwd || undefined);
           }
-          parsed = JSON.parse(uploadResult.body);
         }
       } else {
         // Fallback: try parsing locally (only works for non-encrypted files)
@@ -210,7 +214,11 @@ export default function ImportStatementScreen() {
   const handleImport = () => {
     if (!result || result.rows.length === 0) return;
     addImported(result.rows);
-    router.replace('/(tabs)/books');
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/books');
+    }
   };
 
   // ── reset ──────────────────────────────────────────────────────────────────

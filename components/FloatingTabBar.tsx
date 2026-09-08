@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors, fontFamily, radius, shadow, spacing } from '../constants/theme';
 import { SIDEBAR_WIDTH, useResponsive } from '../hooks/useResponsive';
+import { useAuth } from '../context/AuthContext';
 
 const HIDDEN = new Set(['finance', 'insights']);
 
@@ -51,6 +52,7 @@ import { useTheme } from '../context/ThemeContext';
 
 function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const { theme, toggleTheme, phoneView, togglePhoneView } = useTheme();
+  const { name, username, initials } = useAuth();
   const insets = useSafeAreaInsets();
   const routes = visibleRoutes(state);
   const itemHeight = 50;
@@ -62,7 +64,7 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
 
   useEffect(() => {
     indicatorY.value = withSpring(focusedIndex * itemHeight, SPRING);
-  }, [focusedIndex, indicatorY]);
+  }, [focusedIndex]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: indicatorY.value }],
@@ -110,7 +112,7 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
           <Pressable onPress={togglePhoneView} style={[sidebarStyles.toolBtn, phoneView && sidebarStyles.toolBtnActive]}>
             <Ionicons name={phoneView ? 'phone-portrait' : 'phone-portrait-outline'} size={15} color={phoneView ? colors.onAccent : colors.accent} />
             <Text style={[sidebarStyles.toolBtnText, phoneView && sidebarStyles.toolBtnActiveText]}>
-              {phoneView ? 'Phone View' : 'Phone View'}
+              Phone View
             </Text>
           </Pressable>
 
@@ -119,7 +121,26 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
           </Pressable>
         </View>
 
-        <Text style={sidebarStyles.footerText}>Statement-backed numbers.{'\n'}Nothing is invented for you.</Text>
+        <Pressable
+          style={sidebarStyles.userCard}
+          onPress={() => {
+            const settingsRoute = state.routes.find((r) => r.name === 'settings');
+            if (settingsRoute) press(navigation, settingsRoute, false);
+          }}
+        >
+          <View style={sidebarStyles.userAvatar}>
+            <Text style={sidebarStyles.userAvatarText}>{initials || 'VS'}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={sidebarStyles.userName} numberOfLines={1}>
+              {name || 'Venkatasai'}
+            </Text>
+            <Text style={sidebarStyles.userHandle} numberOfLines={1}>
+              @{username || 'venkatasai200628'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </Pressable>
       </View>
     </View>
   );
@@ -305,6 +326,41 @@ const sidebarStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     lineHeight: 16,
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surfaceAlt,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 6,
+  },
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userAvatarText: {
+    fontSize: 12,
+    fontFamily: fontFamily.extraBold,
+    color: colors.onAccent,
+  },
+  userName: {
+    fontSize: 13,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  userHandle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
   },
 });
 

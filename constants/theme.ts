@@ -1,19 +1,19 @@
-export const colors = {
-  bg: '#050505',
-  bgAlt: '#0A0A0A',
+export const darkColors = {
+  bg: '#000000', // completely black in dark mode
+  bgAlt: '#080808',
   panelSolid: '#0C0C0C',
   surface: '#111111',
   surfaceSoft: '#141414',
   surfaceStrong: '#181818',
-  surfaceAlt: '#1C1C1C',
-  surfaceHi: '#222222',
+  surfaceAlt: '#1F1F1F',
+  surfaceHi: '#252525',
   border: 'rgba(255, 255, 255, 0.08)',
   borderStrong: 'rgba(255, 255, 255, 0.14)',
   borderSoft: 'rgba(255, 255, 255, 0.05)',
-  textPrimary: '#FFFFFF',
+  textPrimary: '#FFFFFF', // white text in dark mode
   textSecondary: '#999999',
-  textMuted: '#5C5C5C',
-  accent: '#FF6A00',
+  textMuted: '#666666',
+  accent: '#FF6A00', // vibrant orange
   accent2: '#FF8C00',
   income: '#00E676',
   expense: '#FF5252',
@@ -27,6 +27,38 @@ export const colors = {
   chartGrid: 'rgba(255, 255, 255, 0.06)',
   forecast: '#FFB300',
 };
+
+export const lightColors = {
+  bg: '#FFFFFF', // completely white in light mode
+  bgAlt: '#F9FAFB',
+  panelSolid: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceSoft: '#F8F9FA',
+  surfaceStrong: '#F3F4F6',
+  surfaceAlt: '#E5E7EB',
+  surfaceHi: '#D1D5DB',
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderStrong: 'rgba(0, 0, 0, 0.15)',
+  borderSoft: 'rgba(0, 0, 0, 0.04)',
+  textPrimary: '#000000', // completely black text in light mode
+  textSecondary: '#374151',
+  textMuted: '#6B7280',
+  accent: '#FF6A00', // the same orange accent!
+  accent2: '#FF8C00',
+  income: '#059669',
+  expense: '#DC2626',
+  savings: '#2563EB',
+  good: '#059669',
+  warn: '#D97706',
+  danger: '#DC2626',
+  live: '#FF6A00',
+  ringCore: '#FFF7ED',
+  onAccent: '#FFFFFF',
+  chartGrid: 'rgba(0, 0, 0, 0.06)',
+  forecast: '#D97706',
+};
+
+export const colors = darkColors;
 
 export const gradients = {
   hero: ['#111111', '#0C0C0C', '#050505'] as const,
