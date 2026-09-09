@@ -2,18 +2,20 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 import { fontFamily, colors, rupee, spacing } from '../constants/theme';
 import { CategorySpend } from '../data/mockData';
+import { useTheme } from '../context/ThemeContext';
 
-export default function CategoryDonut({ data, size = 168 }: { data: CategorySpend[]; size?: number }) {
-  const slices = data.filter((d) => d.amount > 0).slice(0, 6);
+export default function CategoryDonut({ data, size = 138 }: { data: CategorySpend[]; size?: number }) {
+  const { colors: themeColors } = useTheme();
+  const slices = data.filter((d) => d.amount > 0).slice(0, 5);
   const total = slices.reduce((sum, d) => sum + d.amount, 0);
-  const strokeWidth = 18;
+  const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const inner = radius - strokeWidth / 2 - 6;
-  const gap = 4;
+  const inner = radius - strokeWidth / 2 - 4;
+  const gap = 3;
 
   if (total <= 0) {
-    return <Text style={styles.empty}>No spend to chart yet.</Text>;
+    return <Text style={[styles.empty, { color: themeColors.textMuted }]}>No spend to chart yet.</Text>;
   }
 
   let offsetAcc = 0;
@@ -26,7 +28,7 @@ export default function CategoryDonut({ data, size = 168 }: { data: CategorySpen
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={colors.surfaceAlt}
+            stroke={themeColors.surfaceAlt}
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -53,12 +55,12 @@ export default function CategoryDonut({ data, size = 168 }: { data: CategorySpen
               );
             })}
           </G>
-          <Circle cx={size / 2} cy={size / 2} r={inner} fill={colors.surface} />
+          <Circle cx={size / 2} cy={size / 2} r={inner} fill={themeColors.surface} />
           <SvgText
             x={size / 2}
-            y={size / 2 - 8}
-            fill={colors.textMuted}
-            fontSize="11"
+            y={size / 2 - 6}
+            fill={themeColors.textMuted}
+            fontSize="10"
             fontFamily={fontFamily.semiBold}
             textAnchor="middle"
           >
@@ -66,9 +68,9 @@ export default function CategoryDonut({ data, size = 168 }: { data: CategorySpen
           </SvgText>
           <SvgText
             x={size / 2}
-            y={size / 2 + 12}
-            fill={colors.textPrimary}
-            fontSize="13"
+            y={size / 2 + 11}
+            fill={themeColors.textPrimary}
+            fontSize="12"
             fontFamily={fontFamily.bold}
             textAnchor="middle"
           >
@@ -83,12 +85,14 @@ export default function CategoryDonut({ data, size = 168 }: { data: CategorySpen
             <View key={d.category} style={styles.legendRow}>
               <View style={[styles.dot, { backgroundColor: d.color }]} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.legendLabel} numberOfLines={1}>
+                <Text style={[styles.legendLabel, { color: themeColors.textSecondary }]} numberOfLines={1}>
                   {d.category}
                 </Text>
-                <Text style={styles.legendPct}>{pct}%</Text>
+                <Text style={[styles.legendPct, { color: themeColors.textMuted }]}>{pct}%</Text>
               </View>
-              <Text style={styles.legendAmount}>{rupee(Math.round(d.amount))}</Text>
+              <Text style={[styles.legendAmount, { color: themeColors.textPrimary }]}>
+                {rupee(Math.round(d.amount))}
+              </Text>
             </View>
           );
         })}

@@ -1,4 +1,4 @@
-﻿import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import type { ParsedStatementRow } from './bankStatementParser';
@@ -104,11 +104,11 @@ export async function supabaseSaveStatements(userId: string, rows: ParsedStateme
       merchant: r.merchant,
       category: r.category,
       amount: r.amount,
-      date_raw: r.dateRaw,
+      date_raw: String((r as any).date || r.dateLabel || ''),
       date_label: r.dateLabel,
       description: r.rawDescription,
-      upi_id: r.upiId || null,
-      bank_ref: r.bankRef || null,
+      upi_id: (r as any).upiId || null,
+      bank_ref: (r as any).bankRef || null,
     }));
 
     const { error } = await client.from('fin_statements').upsert(payload, { onConflict: 'id' });

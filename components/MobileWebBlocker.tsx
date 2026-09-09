@@ -4,40 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontFamily } from '../constants/theme';
 
 export default function MobileWebBlocker({ children }: { children: React.ReactNode }) {
-  const [isMobileWeb, setIsMobileWeb] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-      
-      if (isMobile) {
-        setIsMobileWeb(true);
-      }
-    }
-  }, []);
-
-  if (isMobileWeb) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="phone-portrait-outline" size={48} color={colors.accent} />
-        </View>
-        <Text style={styles.title}>App Required</Text>
-        <Text style={styles.description}>
-          Fin's real-time SMS detection requires native device features. Please install the Android app to continue on mobile.
-        </Text>
-        <Pressable 
-          style={styles.button}
-          // The EAS Build artifact link or a landing page can go here
-          onPress={() => alert('Download link will be available soon!')}
-        >
-          <Text style={styles.buttonText}>Download App</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
+  // Mobile web access is enabled so users can test and use the app on mobile devices via Vercel
   return <>{children}</>;
 }
 

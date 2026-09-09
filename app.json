@@ -41,9 +41,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d071043a-e56d-4a12-9225-738f87b5582e"
+        "projectId": "d76dad92-b80f-4ae3-a4e7-b320e79588a8"
       }
     },
-    "owner": "venkatasai2006"
+    "owner": "venkx28",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d76dad92-b80f-4ae3-a4e7-b320e79588a8"
+    }
   }
 }

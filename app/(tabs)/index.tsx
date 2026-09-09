@@ -19,11 +19,13 @@ import {
   predictCashFlow,
 } from '../../lib/financeAnalytics';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
+import { useAuth } from '../../context/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { colors, fontFamily, radius, rupee, spacing } from '../../constants/theme';
 
 export default function HomeScreen() {
   const { imported } = useImportedTransactions();
+  const { name, username, initials } = useAuth();
   const { twoCol, contentWidth } = useResponsive();
   const [savingsModalVisible, setSavingsModalVisible] = useState(false);
   const [moneyWentModalVisible, setMoneyWentModalVisible] = useState(false);
@@ -43,6 +45,45 @@ export default function HomeScreen() {
   const trend = useMemo(() => computeMonthlyTrend(points), [points]);
   const hasData = imported.length > 0;
   const rate = Math.max(0, Math.min(100, monthly?.savingsRate ?? 0));
+
+  const cockpitStats = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+
+    for (const tx of imported) {
+      const amt = Number(tx.amount) || 0;
+      if (amt > 0) {
+        income += amt;
+      } else {
+        expense += Math.abs(amt);
+      }
+    }
+
+    const net = income - expense;
+
+    // Check if any transaction has an explicit closing balance from statement or SMS
+    const sorted = [...imported].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const latestWithBal = sorted.find((t) => typeof t.balance === 'number' && Number.isFinite(t.balance));
+
+    const balance = latestWithBal ? latestWithBal.balance! : net;
+    const margin = income > 0 ? Math.round((net / income) * 100) : 0;
+
+    const mIncome = monthly?.income ?? 0;
+    const mExpense = monthly?.expense ?? 0;
+    const mProfit = mIncome - mExpense;
+    const mMargin = mIncome > 0 ? Math.round((mProfit / mIncome) * 100) : 0;
+
+    return {
+      presentBalance: balance,
+      isBankBalance: !!latestWithBal,
+      totalIncome: income,
+      totalExpense: expense,
+      netProfit: net,
+      profitMargin: margin,
+      monthlyProfit: mProfit,
+      monthlyMargin: mMargin,
+    };
+  }, [imported, monthly]);
 
   const rows = imported.slice(0, 6).map((tx) => ({
     id: tx.id,
@@ -83,7 +124,7 @@ export default function HomeScreen() {
       <SectionHeader
         kicker="Dashboard"
         title="Home"
-        subtitle="Net position, cash-flow plots and recent activity — all from your statement."
+        subtitle="Financial cockpit, cash-flow analytics and spending patterns."
       />
 
       {!hasData ? (
@@ -98,27 +139,131 @@ export default function HomeScreen() {
         </Card>
       ) : (
         <>
-          <Card elevated style={styles.hero}>
-            <View style={styles.heroTop}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.heroKicker}>This month · net</Text>
-                <Text style={styles.heroAmount}>{rupee(Math.round(monthly?.savings ?? 0))}</Text>
+          {/* Financial Cockpit: Present Balance & Profit */}
+          <View style={[styles.heroRow, twoCol && styles.heroRowWide]}>
+            {/* 1. Present Balance Card */}
+            <Card elevated style={[styles.heroCard, twoCol && styles.heroCardHalf]}>
+              <View style={styles.heroHeader}>
+                <View style={styles.kickerRow}>
+                  <Ionicons name="wallet-outline" size={15} color={colors.accent} />
+                  <Text style={styles.heroKicker}>Present Balance</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: colors.accent + '22' }]}>
+                  <Text style={[styles.statusBadgeText, { color: colors.accent }]}>
+                    {cockpitStats.isBankBalance ? 'Bank closing' : 'Net funds'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.heroAmount}>{rupee(Math.round(cockpitStats.presentBalance))}</Text>
+
+              <View style={styles.balanceMetaRow}>
+                <View style={styles.inOutPill}>
+                  <Ionicons name="arrow-down-circle" size={13} color={colors.income} />
+                  <Text style={[styles.inOutText, { color: colors.income }]}>
+                    +{rupee(Math.round(cockpitStats.totalIncome))}
+                  </Text>
+                </View>
+                <View style={styles.inOutPill}>
+                  <Ionicons name="arrow-up-circle" size={13} color={colors.expense} />
+                  <Text style={[styles.inOutText, { color: colors.expense }]}>
+                    -{rupee(Math.round(cockpitStats.totalExpense))}
+                  </Text>
+                </View>
+              </View>
+
+              {forecast.isReal ? (
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>
+                    30d outlook {rupee(forecast.projectedBalance, { signed: true })}
+                  </Text>
+                </View>
+              ) : null}
+            </Card>
+
+            {/* 2. Profit / Net Surplus Card */}
+            <Pressable
+              style={[styles.heroCardPressable, twoCol && styles.heroCardHalf]}
+              onPress={() => setSavingsModalVisible(true)}
+            >
+              <Card elevated style={[styles.heroCard, { flex: 1, marginBottom: 0 }]}>
+                <View style={styles.heroHeader}>
+                  <View style={styles.kickerRow}>
+                    <Ionicons
+                      name={cockpitStats.netProfit >= 0 ? 'trending-up-outline' : 'trending-down-outline'}
+                      size={16}
+                      color={cockpitStats.netProfit >= 0 ? colors.income : colors.expense}
+                    />
+                    <Text
+                      style={[
+                        styles.heroKicker,
+                        { color: cockpitStats.netProfit >= 0 ? colors.income : colors.expense },
+                      ]}
+                    >
+                      {cockpitStats.netProfit >= 0 ? 'Total Profit' : 'Net Deficit'}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          (cockpitStats.netProfit >= 0 ? colors.income : colors.expense) + '22',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        { color: cockpitStats.netProfit >= 0 ? colors.income : colors.expense },
+                      ]}
+                    >
+                      {cockpitStats.netProfit >= 0
+                        ? `+${cockpitStats.profitMargin}%`
+                        : `${cockpitStats.profitMargin}%`}{' '}
+                      margin
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={[
+                    styles.heroAmount,
+                    { color: cockpitStats.netProfit >= 0 ? colors.income : colors.expense },
+                  ]}
+                >
+                  {rupee(Math.round(cockpitStats.netProfit), { signed: true })}
+                </Text>
+
                 <Text style={styles.heroMeta}>
-                  {monthly ? `${monthly.savingsRate}% of income kept as savings` : 'Add dated rows for a savings rate'}
+                  This month:{' '}
+                  <Text
+                    style={{
+                      fontFamily: fontFamily.semiBold,
+                      color: cockpitStats.monthlyProfit >= 0 ? colors.income : colors.expense,
+                    }}
+                  >
+                    {rupee(Math.round(cockpitStats.monthlyProfit), { signed: true })}
+                  </Text>{' '}
+                  ({cockpitStats.monthlyMargin >= 0 ? '+' : ''}
+                  {cockpitStats.monthlyMargin}%)
                 </Text>
-              </View>
-            </View>
-            <View style={styles.rateTrack}>
-              <View style={[styles.rateFill, { width: `${rate}%` }]} />
-            </View>
-            {forecast.isReal ? (
-              <View style={styles.heroChip}>
-                <Text style={styles.heroChipText}>
-                  30-day outlook {rupee(forecast.projectedBalance, { signed: true })}
-                </Text>
-              </View>
-            ) : null}
-          </Card>
+
+                <View style={styles.rateTrack}>
+                  <View
+                    style={[
+                      styles.rateFill,
+                      {
+                        width: `${Math.max(0, Math.min(100, Math.abs(cockpitStats.profitMargin)))}%`,
+                        backgroundColor:
+                          cockpitStats.netProfit >= 0 ? colors.income : colors.expense,
+                      },
+                    ]}
+                  />
+                </View>
+              </Card>
+            </Pressable>
+          </View>
 
           <View style={styles.statsRow}>
             <StatCard
@@ -187,7 +332,7 @@ export default function HomeScreen() {
                 hint="Tap for large spends & top recipient breakdown."
                 style={{ marginBottom: 0 }}
               >
-                <CategoryDonut data={categories} size={twoCol ? 148 : 160} />
+                <CategoryDonut data={categories} size={twoCol ? 148 : 138} />
                 <View style={styles.tapPrompt}>
                   <Text style={styles.tapPromptText}>Tap to see large expenses & merchants</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.accent} />
@@ -384,6 +529,66 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  heroRow: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  heroRowWide: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  heroCard: {
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+  },
+  heroCardHalf: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  heroCardPressable: {
+    flex: 1,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+  },
+  balanceMetaRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  inOutPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  inOutText: {
+    fontSize: 12,
+    fontFamily: fontFamily.semiBold,
+  },
   hero: {
     borderRadius: radius.xl,
     padding: spacing.xl,
@@ -398,11 +603,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   heroAmount: {
-    fontSize: 42,
+    fontSize: 36,
     fontFamily: fontFamily.extraBold,
     color: colors.textPrimary,
-    letterSpacing: -1.4,
-    marginTop: 8,
+    letterSpacing: -1.2,
+    marginTop: 6,
   },
   heroMeta: {
     fontSize: 13,
@@ -426,7 +631,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     backgroundColor: colors.accent + '28',
     borderRadius: radius.pill,
-    paddingVertical: 7,
+    paddingVertical: 6,
     paddingHorizontal: 12,
   },
   heroChipText: {
@@ -615,5 +820,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: fontFamily.bold,
     color: colors.textPrimary,
+  },
+  userBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 4,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  userAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userAvatarText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: colors.onAccent,
+  },
+  userName: {
+    fontSize: 14,
+    fontFamily: fontFamily.bold,
+    color: colors.textPrimary,
+  },
+  userHandle: {
+    fontSize: 12,
+    fontFamily: fontFamily.medium,
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
+  settingsBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
   },
 });

@@ -9,7 +9,8 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -18,13 +19,15 @@
       },
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://finapp-07lp.onrender.com"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_BACKEND_URL": "https://finapp-07lp.onrender.com"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

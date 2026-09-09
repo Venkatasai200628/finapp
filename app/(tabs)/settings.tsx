@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,11 +10,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
 import { useResponsive } from '../../hooks/useResponsive';
-import {
-  getSupabaseCredentials,
-  saveSupabaseCredentials,
-  isSupabaseConfigured,
-} from '../../lib/supabaseClient';
 
 export default function SettingsScreen() {
   const { email, name, username, initials, signOut } = useAuth();
@@ -22,28 +17,6 @@ export default function SettingsScreen() {
   const { imported, clearImported } = useImportedTransactions();
   const { isDesktop } = useResponsive();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [supabaseModalVisible, setSupabaseModalVisible] = useState(false);
-
-  const [sbUrl, setSbUrl] = useState('');
-  const [sbKey, setSbKey] = useState('');
-  const [sbSavedMsg, setSbSavedMsg] = useState(false);
-
-  useEffect(() => {
-    const creds = getSupabaseCredentials();
-    setSbUrl(creds.url);
-    setSbKey(creds.anonKey);
-  }, [supabaseModalVisible]);
-
-  const handleSaveSupabase = async () => {
-    await saveSupabaseCredentials(sbUrl, sbKey);
-    setSbSavedMsg(true);
-    setTimeout(() => {
-      setSbSavedMsg(false);
-      setSupabaseModalVisible(false);
-    }, 1200);
-  };
-
-  const isSbConnected = isSupabaseConfigured();
 
   const handleDeleteAccount = () => {
     clearImported();
@@ -115,32 +88,7 @@ export default function SettingsScreen() {
         )}
       </Card>
 
-      {/* Database Connection */}
-      <Text style={styles.sectionTitle}>Cloud Database & Sync</Text>
-      <Card style={styles.settingCard}>
-        <View style={styles.settingRow}>
-          <View style={[styles.iconWrap, { backgroundColor: (isSbConnected ? colors.income : colors.warn) + '22' }]}>
-            <Ionicons name="server" size={18} color={isSbConnected ? colors.income : colors.warn} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.settingLabel}>Supabase Postgres DB</Text>
-              <View style={[styles.livePill, !isSbConnected && { backgroundColor: colors.warn + '22' }]}>
-                <View style={[styles.liveDot, !isSbConnected && { backgroundColor: colors.warn }]} />
-                <Text style={[styles.livePillText, !isSbConnected && { color: colors.warn }]}>
-                  {isSbConnected ? 'Connected' : 'Configure'}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.settingDesc}>
-              {isSbConnected ? 'Cloud sync active for auth & bank statements' : 'Connect your Supabase project for persistent cloud storage'}
-            </Text>
-          </View>
-          <Pressable style={styles.infoBtn} onPress={() => setSupabaseModalVisible(true)}>
-            <Ionicons name="settings-outline" size={16} color={colors.textSecondary} />
-          </Pressable>
-        </View>
-      </Card>
+
 
       {/* Navigation Quick Links */}
       <Text style={styles.sectionTitle}>Workspace Slices</Text>
@@ -235,68 +183,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Supabase Connection Configuration Modal */}
-      <Modal
-        visible={supabaseModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSupabaseModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="server" size={20} color={colors.accent} />
-                <Text style={styles.modalTitle}>Supabase Cloud Database</Text>
-              </View>
-              <Pressable onPress={() => setSupabaseModalVisible(false)} hitSlop={10}>
-                <Ionicons name="close-circle" size={24} color={colors.textMuted} />
-              </Pressable>
-            </View>
 
-            <Text style={styles.modalDesc}>
-              Connect your Supabase project for instant user authentication and encrypted cloud statement storage across all devices.
-            </Text>
-
-            <Text style={styles.inputHeader}>Supabase Project URL</Text>
-            <TextInput
-              style={styles.sbInput}
-              value={sbUrl}
-              onChangeText={setSbUrl}
-              placeholder="https://your-project.supabase.co"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <Text style={[styles.inputHeader, { marginTop: spacing.md }]}>Supabase Anon / Public Key</Text>
-            <TextInput
-              style={styles.sbInput}
-              value={sbKey}
-              onChangeText={setSbKey}
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-            />
-
-            {sbSavedMsg && (
-              <View style={styles.successBox}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.income} />
-                <Text style={styles.successText}>Credentials saved! Cloud database connected.</Text>
-              </View>
-            )}
-
-            <Pressable
-              style={[styles.modalBtn, { marginTop: spacing.lg }]}
-              onPress={handleSaveSupabase}
-            >
-              <Text style={styles.modalBtnText}>Save & Connect</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 }
@@ -362,7 +249,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+    borderTopColor: colors.borderSoft,
   },
   iconWrap: {
     width: 38,
@@ -503,7 +390,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.borderSoft,
   },
   stepTitle: {
     fontSize: 13,
@@ -541,38 +428,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
     marginBottom: spacing.md,
-  },
-  inputHeader: {
-    fontSize: 12,
-    fontFamily: fontFamily.bold,
-    color: colors.textPrimary,
-    marginBottom: 6,
-  },
-  sbInput: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontFamily: fontFamily.regular,
-  },
-  successBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.income + '18',
-    borderRadius: radius.md,
-    padding: 10,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.income + '44',
-  },
-  successText: {
-    fontSize: 12,
-    fontFamily: fontFamily.semiBold,
-    color: colors.income,
   },
 });

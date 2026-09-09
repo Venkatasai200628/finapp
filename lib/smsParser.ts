@@ -18,6 +18,7 @@ export type ParsedSms = {
   category: string;
   accountHint?: string;
   reference?: string;
+  balance?: number;
   /** 0-1. Below ~0.5 the result is a guess and shouldn't auto-alert. */
   confidence: number;
 };
@@ -103,7 +104,7 @@ function inferCategory(merchant: string, body: string, isCredit: boolean): strin
   for (const [category, pattern] of CATEGORY_KEYWORDS) {
     if (pattern.test(haystack)) return category;
   }
-  return isCredit ? 'Income' : 'Uncategorized';
+  return isCredit ? 'Income' : 'Unknown';
 }
 
 /**
@@ -149,6 +150,10 @@ export function parseTransactionSms(body: string): ParsedSms | null {
   const accountHint = body.match(/(?:a\/c|acct|account|a\/c no\.?)\s*(?:no\.?)?\s*([xX*]+\d{3,6}|\d{4})/i)?.[1];
   const reference = body.match(/(?:ref(?:no|erence)?\.?|upi:?)\s*[:#]?\s*(\d{6,20})/i)?.[1];
 
+  const balanceMatch = body.match(/(?:bal(?:ance)?|avl\s*bal(?:ance)?|available\s*bal(?:ance)?|net\s*bal(?:ance)?)\s*(?:is|:)?\s*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{1,2})?)/i);
+  const parsedBal = balanceMatch ? toNumber(balanceMatch[1]) : undefined;
+  const balance = Number.isFinite(parsedBal) ? parsedBal : undefined;
+
   let confidence = 0.5;
   if (merchant) confidence += 0.25;
   if (accountHint) confidence += 0.15;
@@ -160,6 +165,7 @@ export function parseTransactionSms(body: string): ParsedSms | null {
     category: inferCategory(merchant, body, treatAsCredit),
     accountHint,
     reference,
+    balance,
     confidence: Math.min(1, Number(confidence.toFixed(2))),
   };
 }

@@ -1,19 +1,19 @@
 export const darkColors = {
-  bg: '#000000', // completely black in dark mode
-  bgAlt: '#080808',
-  panelSolid: '#0C0C0C',
-  surface: '#111111',
-  surfaceSoft: '#141414',
-  surfaceStrong: '#181818',
-  surfaceAlt: '#1F1F1F',
-  surfaceHi: '#252525',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderStrong: 'rgba(255, 255, 255, 0.14)',
-  borderSoft: 'rgba(255, 255, 255, 0.05)',
-  textPrimary: '#FFFFFF', // white text in dark mode
-  textSecondary: '#999999',
-  textMuted: '#666666',
-  accent: '#FF6A00', // vibrant orange
+  bg: '#000000', // pure black background in dark mode
+  bgAlt: '#0A0A0A',
+  panelSolid: '#121212',
+  surface: '#151515', // distinctly elevated dark surface
+  surfaceSoft: '#181818',
+  surfaceStrong: '#1E1E1E',
+  surfaceAlt: '#262626',
+  surfaceHi: '#303030',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderStrong: 'rgba(255, 255, 255, 0.18)',
+  borderSoft: 'rgba(255, 255, 255, 0.06)',
+  textPrimary: '#FFFFFF', // crisp white text in dark mode
+  textSecondary: '#A0A0A0',
+  textMuted: '#707070',
+  accent: '#FF6A00', // signature vibrant orange
   accent2: '#FF8C00',
   income: '#00E676',
   expense: '#FF5252',
@@ -24,7 +24,7 @@ export const darkColors = {
   live: '#FF6A00',
   ringCore: '#1A0E00',
   onAccent: '#FFFFFF',
-  chartGrid: 'rgba(255, 255, 255, 0.06)',
+  chartGrid: 'rgba(255, 255, 255, 0.08)',
   forecast: '#FFB300',
 };
 
@@ -117,6 +117,13 @@ export function statusColor(status: 'good' | 'warn' | 'danger') {
 }
 
 export const shadow = {
+  sm: {
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
   card: {
     shadowColor: '#000',
     shadowOpacity: 0.4,

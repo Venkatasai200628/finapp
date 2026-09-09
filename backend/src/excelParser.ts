@@ -17,24 +17,75 @@ export type ParseResult = {
   errors: string[];
 };
 
-function parseIndianDate(raw: string): number | null {
-  const s = String(raw ?? '').trim();
+function parseIndianDate(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+
+  if (raw instanceof Date) {
+    const t = raw.getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+
+  const s = String(raw).trim();
+  if (!s) return null;
 
   const serial = Number(s);
-  if (!Number.isNaN(serial) && serial > 1000) {
-    const d = XLSX.SSF.parse_date_code(serial);
-    if (d) return new Date(d.y, d.m - 1, d.d).getTime();
+  if (!Number.isNaN(serial) && serial > 1000 && serial < 100000) {
+    try {
+      const d = XLSX.SSF.parse_date_code(serial);
+      if (d) return new Date(d.y, d.m - 1, d.d).getTime();
+    } catch {}
   }
 
   const dmy = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/);
   if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]) - 1;
     const year = dmy[3].length === 2 ? 2000 + Number(dmy[3]) : Number(dmy[3]);
-    return new Date(year, Number(dmy[2]) - 1, Number(dmy[1])).getTime();
+    const d = new Date(year, month, day);
+    if (!Number.isNaN(d.getTime())) return d.getTime();
   }
+
+  const dMmmY = s.match(/^(\d{1,2})[/\-.]([A-Za-z]{3,9})[/\-.](\d{2,4})/);
+  if (dMmmY) {
+    const parsed = Date.parse(`${dMmmY[1]} ${dMmmY[2]} ${dMmmY[3]}`);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+
   const ymd = s.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/);
-  if (ymd) return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])).getTime();
+  if (ymd) {
+    const year = Number(ymd[1]);
+    const month = Number(ymd[2]) - 1;
+    const day = Number(ymd[3]);
+    const d = new Date(year, month, day);
+    if (!Number.isNaN(d.getTime())) return d.getTime();
+  }
+
   const parsed = Date.parse(s);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatDateLabel(ts: number, raw?: string): string {
+  if (Number.isFinite(ts) && ts > 0) {
+    const d = new Date(ts);
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getMonth()] || 'Jan';
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+  const s = String(raw || '').trim();
+  if (/^\d{4,6}$/.test(s)) return 'Recent';
+  return s || 'Recent';
+}
+
+function isSummaryOrBalanceRow(desc: string): boolean {
+  const upper = desc.toUpperCase().trim();
+  return (
+    /^(TOTAL|GRAND\s*TOTAL|SUBTOTAL|SUMMARY|CLOSING\s*BAL|OPENING\s*BAL|BALANCE\s*B\/F|BALANCE\s*C\/F|B\/F|C\/F|BROUGHT\s*FORWARD|CARRIED\s*FORWARD)/i.test(upper) ||
+    /^(TOTAL\s*DEBIT|TOTAL\s*CREDIT|TOTAL\s*WITHDRAWAL|TOTAL\s*DEPOSIT)/i.test(upper) ||
+    /^CLOSING\s*BALANCE/i.test(upper) ||
+    /^OPENING\s*BALANCE/i.test(upper)
+  );
 }
 
 function toNumber(raw: unknown): number {
@@ -140,7 +191,7 @@ function extractMerchantAndCategory(rawDesc: string): { merchant: string; catego
 
   // Category determination
   const combined = `${merchant} ${text} ${upiHandle}`.toLowerCase();
-  let category = 'Uncategorized';
+  let category = 'Unknown';
 
   if (/salary|sal cr|payroll|stipend|interest cr/.test(combined)) {
     category = 'Income';
@@ -156,8 +207,8 @@ function extractMerchantAndCategory(rawDesc: string): { merchant: string; catego
     category = 'Shopping';
   } else if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air|indigo|railway/.test(combined)) {
     category = 'Transport';
-  } else if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash|ravula|prasada|balakris/.test(combined)) {
-    category = 'Transfer';
+  } else {
+    category = 'Unknown';
   }
 
   return { merchant, category };
@@ -173,23 +224,68 @@ type ColumnMap = {
 };
 
 function detectColumns(header: string[]): ColumnMap {
-  const lower = header.map((h) => String(h ?? '').toLowerCase().trim());
-  const find = (...keys: string[]) => lower.findIndex((h) => keys.some((k) => h.includes(k)));
+  const clean = header.map((h) => String(h ?? '').trim());
+  const lower = clean.map((h) => h.toLowerCase());
 
-  const map: ColumnMap = {
-    date: find('date', 'txn date', 'transaction date', 'value date', 'posted date'),
-    description: find('description', 'narration', 'particulars', 'remarks', 'details', 'transaction remarks'),
-    debit: find('debit', 'withdrawal', 'dr amount', 'debit amount'),
-    credit: find('credit', 'deposit', 'cr amount', 'credit amount'),
-    amount: find('amount', 'txn amount', 'transaction amount'),
-    type: find('dr/cr', 'type', 'cr/dr', 'transaction type'),
+  // Never match balance/closing columns as debit, credit, or amount!
+  const isBalance = (h: string) => /balance|closing|avail|bal\b/i.test(h);
+
+  // 1. Date column
+  const dateIdx = lower.findIndex((h) =>
+    !isBalance(h) && (
+      /(txn|trans|value|posting|entry)?\s*date/i.test(h) ||
+      h === 'date'
+    )
+  );
+
+  // 2. Description / Narration column
+  const descIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    /(narration|description|particulars|remarks|details|summary)/i.test(h)
+  );
+
+  // 3. Debit / Withdrawal column
+  const debitIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    (
+      /(^|\b|_)(debit|withdrawal|withdraw|dr|dr\.)(\b|_|\s|\(|$)/i.test(h) ||
+      /(withdrawal|debit)\s*(amt|amount)?/i.test(h)
+    )
+  );
+
+  // 4. Credit / Deposit column
+  const creditIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    h !== 'description' &&
+    (
+      /(^|\b|_)(credit|deposit|deposited|cr|cr\.)(\b|_|\s|\(|$)/i.test(h) ||
+      /(deposit|credit)\s*(amt|amount)?/i.test(h)
+    )
+  );
+
+  // 5. Amount column (only if separate debit/credit don't exist)
+  let amountIdx = -1;
+  if (debitIdx === -1 && creditIdx === -1) {
+    amountIdx = lower.findIndex((h) =>
+      !isBalance(h) &&
+      /(^|\b|_)(amount|amt|txn\s*amount|transaction\s*amount|net\s*amount)(\b|_|\s|\(|$)/i.test(h)
+    );
+  }
+
+  // 6. Type column (DR/CR)
+  const typeIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    /(dr\/cr|cr\/dr|txn\s*type|type)/i.test(h)
+  );
+
+  return {
+    date: dateIdx !== -1 ? dateIdx : undefined,
+    description: descIdx !== -1 ? descIdx : undefined,
+    debit: debitIdx !== -1 ? debitIdx : undefined,
+    credit: creditIdx !== -1 ? creditIdx : undefined,
+    amount: amountIdx !== -1 ? amountIdx : undefined,
+    type: typeIdx !== -1 ? typeIdx : undefined,
   };
-
-  Object.keys(map).forEach((k) => {
-    const key = k as keyof ColumnMap;
-    if ((map[key] as number) === -1) map[key] = undefined;
-  });
-  return map;
 }
 
 function bestSheet(wb: XLSX.WorkBook): XLSX.WorkSheet | null {
@@ -282,6 +378,7 @@ export function parseExcelStatementNode(data: Buffer): ParseResult {
     const dateRaw = String(parts[cols.date!] ?? '').trim();
     const desc = String(parts[cols.description!] ?? '').trim();
     if (!desc) { skipped++; continue; }
+    if (isSummaryOrBalanceRow(desc)) { skipped++; continue; }
 
     let amount = 0;
     if (cols.debit !== undefined || cols.credit !== undefined) {
@@ -289,14 +386,24 @@ export function parseExcelStatementNode(data: Buffer): ParseResult {
       const credit = cols.credit !== undefined ? toNumber(parts[cols.credit]) : 0;
       if (Number.isFinite(debit) && debit > 0) amount = -debit;
       else if (Number.isFinite(credit) && credit > 0) amount = credit;
+      else if (Number.isFinite(debit) && debit < 0) amount = debit;
+      else if (Number.isFinite(credit) && credit < 0) amount = credit;
       else { skipped++; continue; }
     } else if (cols.amount !== undefined) {
       const rawAmt = toNumber(parts[cols.amount]);
       if (!Number.isFinite(rawAmt) || rawAmt === 0) { skipped++; continue; }
       const typeCol = cols.type !== undefined ? String(parts[cols.type] ?? '').toLowerCase() : '';
-      if (typeCol.startsWith('dr') || typeCol === 'debit') amount = -Math.abs(rawAmt);
-      else if (typeCol.startsWith('cr') || typeCol === 'credit') amount = Math.abs(rawAmt);
-      else amount = rawAmt;
+
+      const isNarrationCredit = /UPI[/-]CR|DEP\s+TFR|CREDIT|DEPOSIT/i.test(desc);
+      const isNarrationDebit = /UPI[/-]DR|WDL\s+TFR|DEBIT|WITHDRAWAL/i.test(desc);
+
+      if (typeCol.startsWith('dr') || typeCol === 'debit' || (!typeCol && isNarrationDebit)) {
+        amount = -Math.abs(rawAmt);
+      } else if (typeCol.startsWith('cr') || typeCol === 'credit' || (!typeCol && isNarrationCredit)) {
+        amount = Math.abs(rawAmt);
+      } else {
+        amount = rawAmt;
+      }
     } else {
       skipped++;
       continue;
@@ -311,7 +418,7 @@ export function parseExcelStatementNode(data: Buffer): ParseResult {
       amount,
       timestamp: ts,
       source: 'bank_statement',
-      dateLabel: dateRaw || new Date(ts).toLocaleDateString('en-IN'),
+      dateLabel: formatDateLabel(ts, dateRaw),
       rawDescription: desc,
     });
   }

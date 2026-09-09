@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { G, Line, Rect } from 'react-native-svg';
 import { colors, fontFamily, spacing } from '../constants/theme';
 import { MonthlyPoint } from '../data/mockData';
+import { useTheme } from '../context/ThemeContext';
 
 type Props = {
   data: MonthlyPoint[];
@@ -10,8 +11,10 @@ type Props = {
 };
 
 export default function MonthlyTrendChart({ data, width = 300, height = 176 }: Props) {
+  const { colors: themeColors } = useTheme();
+
   if (data.length === 0) {
-    return <Text style={styles.empty}>Need more dated rows for a trend.</Text>;
+    return <Text style={[styles.empty, { color: themeColors.textMuted }]}>Need more dated rows for a trend.</Text>;
   }
 
   const padT = 8;
@@ -28,18 +31,18 @@ export default function MonthlyTrendChart({ data, width = 300, height = 176 }: P
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: colors.income }]} />
-          <Text style={styles.legendText}>Income</Text>
+          <Text style={[styles.legendText, { color: themeColors.textMuted }]}>Income</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: colors.expense }]} />
-          <Text style={styles.legendText}>Spend</Text>
+          <Text style={[styles.legendText, { color: themeColors.textMuted }]}>Spend</Text>
         </View>
       </View>
       <Svg width={width} height={height}>
         {grids.map((g) => {
           const y = padT + usableH * (1 - g);
           return (
-            <Line key={g} x1={0} y1={y} x2={width} y2={y} stroke={colors.chartGrid} strokeWidth={1} />
+            <Line key={g} x1={0} y1={y} x2={width} y2={y} stroke={themeColors.border} strokeWidth={1} />
           );
         })}
         {data.map((d, i) => {
@@ -70,7 +73,7 @@ export default function MonthlyTrendChart({ data, width = 300, height = 176 }: P
       </Svg>
       <View style={styles.labelRow}>
         {data.map((d) => (
-          <Text key={d.month} style={[styles.label, { width: groupW }]}>
+          <Text key={d.month} style={[styles.label, { width: groupW, color: themeColors.textMuted }]}>
             {d.month}
           </Text>
         ))}

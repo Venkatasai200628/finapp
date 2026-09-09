@@ -3,6 +3,7 @@ import type { LedgerTransaction } from './ledgerAnalytics';
 export type ParsedStatementRow = LedgerTransaction & {
   dateLabel: string;
   rawDescription: string;
+  balance?: number;
 };
 
 export type ParseResult = {
@@ -117,7 +118,7 @@ export function extractMerchantAndCategory(rawDesc: string): { merchant: string;
   }
 
   const combined = `${merchant} ${text} ${upiHandle}`.toLowerCase();
-  let category = 'Uncategorized';
+  let category = 'Unknown';
 
   if (/salary|sal cr|payroll|stipend|interest cr/.test(combined)) {
     category = 'Income';
@@ -133,8 +134,8 @@ export function extractMerchantAndCategory(rawDesc: string): { merchant: string;
     category = 'Shopping';
   } else if (/uber|ola|petrol|fuel|irctc|rapido|metro|transport|auto|cab|bus|air|indigo|railway/.test(combined)) {
     category = 'Transport';
-  } else if (/upi|neft|imps|rtgs|transfer|trf|wdl|atm|cash|ravula|prasada|balakris/.test(combined)) {
-    category = 'Transfer';
+  } else {
+    category = 'Unknown';
   }
 
   return { merchant, category };
@@ -168,34 +169,100 @@ type ColumnMap = {
   credit?: number;
   amount?: number;
   type?: number;
+  balance?: number;
 };
 
+function formatDateLabel(ts: number, raw?: string): string {
+  if (Number.isFinite(ts) && ts > 0) {
+    const d = new Date(ts);
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getMonth()] || 'Jan';
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+  const s = String(raw || '').trim();
+  if (/^\d{4,6}$/.test(s)) return 'Recent';
+  return s || 'Recent';
+}
+
+function isSummaryOrBalanceRow(desc: string): boolean {
+  const upper = desc.toUpperCase().trim();
+  return (
+    /^(TOTAL|GRAND\s*TOTAL|SUBTOTAL|SUMMARY|CLOSING\s*BAL|OPENING\s*BAL|BALANCE\s*B\/F|BALANCE\s*C\/F|B\/F|C\/F|BROUGHT\s*FORWARD|CARRIED\s*FORWARD)/i.test(upper) ||
+    /^(TOTAL\s*DEBIT|TOTAL\s*CREDIT|TOTAL\s*WITHDRAWAL|TOTAL\s*DEPOSIT)/i.test(upper) ||
+    /^CLOSING\s*BALANCE/i.test(upper) ||
+    /^OPENING\s*BALANCE/i.test(upper)
+  );
+}
+
 function detectColumns(header: string[]): ColumnMap {
-  const lower = header.map((h) => h.toLowerCase());
-  const find = (...keys: string[]) => lower.findIndex((h) => keys.some((k) => h.includes(k)));
+  const clean = header.map((h) => String(h ?? '').trim());
+  const lower = clean.map((h) => h.toLowerCase());
 
-  const map: ColumnMap = {
-    date: find('date', 'txn date', 'transaction date', 'value date'),
-    description: find('description', 'narration', 'particulars', 'remarks', 'details'),
-    debit: find('debit', 'withdrawal', 'dr'),
-    credit: find('credit', 'deposit', 'cr'),
-    amount: find('amount', 'txn amount'),
-    type: find('dr/cr', 'type', 'cr/dr'),
+  const isBalance = (h: string) => /balance|closing|avail|bal\b/i.test(h);
+
+  const balanceIdx = lower.findIndex((h) => isBalance(h));
+
+  const dateIdx = lower.findIndex((h) =>
+    !isBalance(h) && (
+      /(txn|trans|value|posting|entry)?\s*date/i.test(h) ||
+      h === 'date'
+    )
+  );
+
+  const descIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    /(narration|description|particulars|remarks|details|summary)/i.test(h)
+  );
+
+  const debitIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    (
+      /(^|\b|_)(debit|withdrawal|withdraw|dr|dr\.)(\b|_|\s|\(|$)/i.test(h) ||
+      /(withdrawal|debit)\s*(amt|amount)?/i.test(h)
+    )
+  );
+
+  const creditIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    h !== 'description' &&
+    (
+      /(^|\b|_)(credit|deposit|deposited|cr|cr\.)(\b|_|\s|\(|$)/i.test(h) ||
+      /(deposit|credit)\s*(amt|amount)?/i.test(h)
+    )
+  );
+
+  let amountIdx = -1;
+  if (debitIdx === -1 && creditIdx === -1) {
+    amountIdx = lower.findIndex((h) =>
+      !isBalance(h) &&
+      /(^|\b|_)(amount|amt|txn\s*amount|transaction\s*amount|net\s*amount)(\b|_|\s|\(|$)/i.test(h)
+    );
+  }
+
+  const typeIdx = lower.findIndex((h) =>
+    !isBalance(h) &&
+    /(dr\/cr|cr\/dr|txn\s*type|type)/i.test(h)
+  );
+
+  return {
+    date: dateIdx !== -1 ? dateIdx : undefined,
+    description: descIdx !== -1 ? descIdx : undefined,
+    debit: debitIdx !== -1 ? debitIdx : undefined,
+    credit: creditIdx !== -1 ? creditIdx : undefined,
+    amount: amountIdx !== -1 ? amountIdx : undefined,
+    type: typeIdx !== -1 ? typeIdx : undefined,
+    balance: balanceIdx !== -1 ? balanceIdx : undefined,
   };
-
-  Object.keys(map).forEach((k) => {
-    const key = k as keyof ColumnMap;
-    if (map[key] === -1) map[key] = undefined;
-  });
-  return map;
 }
 
 /**
  * Parses CSV bank statements from HDFC, SBI, ICICI, Axis and generic exports.
  * Paste the file contents or read a .csv file as text on device.
  */
-export function parseBankStatementCsv(text: string): ParseResult {
-  const lines = text
+export function parseBankStatementCsv(rawCsv: string): ParseResult {
+  const lines = rawCsv
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
@@ -226,6 +293,10 @@ export function parseBankStatementCsv(text: string): ParseResult {
       skipped++;
       continue;
     }
+    if (isSummaryOrBalanceRow(desc)) {
+      skipped++;
+      continue;
+    }
 
     let amount = 0;
     if (cols.debit !== undefined || cols.credit !== undefined) {
@@ -233,6 +304,8 @@ export function parseBankStatementCsv(text: string): ParseResult {
       const credit = cols.credit !== undefined ? toNumber(parts[cols.credit] ?? '') : 0;
       if (Number.isFinite(debit) && debit > 0) amount = -debit;
       else if (Number.isFinite(credit) && credit > 0) amount = credit;
+      else if (Number.isFinite(debit) && debit < 0) amount = debit;
+      else if (Number.isFinite(credit) && credit < 0) amount = credit;
       else {
         skipped++;
         continue;
@@ -244,9 +317,16 @@ export function parseBankStatementCsv(text: string): ParseResult {
         continue;
       }
       const typeCol = cols.type !== undefined ? (parts[cols.type] ?? '').toLowerCase() : '';
-      if (typeCol.startsWith('dr') || typeCol === 'debit') amount = -Math.abs(rawAmt);
-      else if (typeCol.startsWith('cr') || typeCol === 'credit') amount = Math.abs(rawAmt);
-      else amount = rawAmt;
+      const isNarrationCredit = /UPI[/-]CR|DEP\s+TFR|CREDIT|DEPOSIT/i.test(desc);
+      const isNarrationDebit = /UPI[/-]DR|WDL\s+TFR|DEBIT|WITHDRAWAL/i.test(desc);
+
+      if (typeCol.startsWith('dr') || typeCol === 'debit' || (!typeCol && isNarrationDebit)) {
+        amount = -Math.abs(rawAmt);
+      } else if (typeCol.startsWith('cr') || typeCol === 'credit' || (!typeCol && isNarrationCredit)) {
+        amount = Math.abs(rawAmt);
+      } else {
+        amount = rawAmt;
+      }
     } else {
       skipped++;
       continue;
@@ -254,14 +334,18 @@ export function parseBankStatementCsv(text: string): ParseResult {
 
     const ts = parseIndianDate(dateRaw) ?? Date.now();
     const { merchant, category } = extractMerchantAndCategory(desc);
+    const rowBal = cols.balance !== undefined ? toNumber(parts[cols.balance] ?? '') : undefined;
+    const finalBal = Number.isFinite(rowBal) ? rowBal : undefined;
+
     rows.push({
       id: `import-${i}-${ts}`,
       merchant,
       category,
       amount,
+      balance: finalBal,
       timestamp: ts,
       source: 'bank_statement',
-      dateLabel: dateRaw || new Date(ts).toLocaleDateString('en-IN'),
+      dateLabel: formatDateLabel(ts, dateRaw),
       rawDescription: desc,
     });
   }

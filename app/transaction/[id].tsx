@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Card from '../../components/Card';
 import DetailHeader from '../../components/DetailHeader';
 import Screen from '../../components/Screen';
 import { submitVerdict } from '../../lib/backendClient';
 import { useAuth } from '../../context/AuthContext';
+import { useImportedTransactions } from '../../context/ImportedTransactionsContext';
 import { colors, fontFamily, radius, spacing, typography } from '../../constants/theme';
 
 const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -18,8 +19,23 @@ const CATEGORY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   Transfer: 'swap-horizontal',
   Trading: 'trending-up',
   Shopping: 'bag',
-  Uncategorized: 'help-circle',
+  Bills: 'receipt',
+  Unknown: 'help-circle-outline',
+  Uncategorized: 'help-circle-outline',
 };
+
+const COMMON_CATEGORIES = [
+  'Food',
+  'Groceries',
+  'Transport',
+  'Shopping',
+  'Bills',
+  'Subscription',
+  'Transfer',
+  'Income',
+  'Trading',
+  'Unknown',
+];
 
 export default function TransactionDetailScreen() {
   const params = useLocalSearchParams<{
@@ -33,11 +49,30 @@ export default function TransactionDetailScreen() {
     reasons?: string;
   }>();
 
+  const { imported, updateCategory, customCategories } = useImportedTransactions();
+  const existingItem = imported.find((r) => r.id === params.id);
+  const [currentCategory, setCurrentCategory] = useState(existingItem?.category || params.category || 'Unknown');
+  const [showPicker, setShowPicker] = useState(false);
+  const [customText, setCustomText] = useState('');
+  const [isTypingCustom, setIsTypingCustom] = useState(false);
+
+  const displayCategories = Array.from(new Set([...COMMON_CATEGORIES, ...customCategories]));
+
+  const selectCategory = (cat: string) => {
+    const trimmed = cat.trim();
+    if (!trimmed) return;
+    updateCategory(params.id, trimmed);
+    setCurrentCategory(trimmed);
+    setShowPicker(false);
+    setIsTypingCustom(false);
+    setCustomText('');
+  };
+
   const amount = Number(params.amount ?? 0);
   const isIncome = amount >= 0;
   const isFlagged = params.flagged === '1';
   const reasons = params.reasons ? params.reasons.split('|').filter(Boolean) : [];
-  const icon = CATEGORY_ICON[params.category ?? ''] ?? 'help-circle';
+  const icon = CATEGORY_ICON[currentCategory] ?? 'help-circle-outline';
 
   const { token } = useAuth();
   const [resolution, setResolution] = useState<'none' | 'safe' | 'reported'>('none');
@@ -113,8 +148,82 @@ export default function TransactionDetailScreen() {
             <Text style={typography.h3}>Details</Text>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Category</Text>
-              <Text style={styles.detailValue}>{params.category}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.catBadge, currentCategory === 'Unknown' && styles.catBadgeUnknown]}>
+                  <Text style={[styles.catBadgeText, currentCategory === 'Unknown' && { color: colors.warn }]}>
+                    {currentCategory}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setShowPicker((v) => !v)}
+                  style={styles.changeBtn}
+                >
+                  <Ionicons name={showPicker ? 'chevron-up' : 'pencil'} size={12} color={colors.accent} />
+                  <Text style={styles.changeBtnText}>{showPicker ? 'Done' : 'Change'}</Text>
+                </Pressable>
+              </View>
             </View>
+
+            {showPicker && (
+              <View style={styles.pickerBox}>
+                <Text style={styles.pickerTitle}>Select or Change Category</Text>
+                <View style={styles.chipWrap}>
+                  {displayCategories.map((cat) => {
+                    const active = cat.toLowerCase() === currentCategory.toLowerCase();
+                    return (
+                      <Pressable
+                        key={cat}
+                        onPress={() => selectCategory(cat)}
+                        style={[styles.catChip, active && styles.catChipActive]}
+                      >
+                        <Text style={[styles.catChipText, active && styles.catChipTextActive]}>
+                          {cat}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.ruleNotice}>
+                  <Ionicons name="sparkles" size={13} color={colors.accent} />
+                  <Text style={styles.ruleNoticeText}>
+                    Categorizing will automatically remember this rule for all past & future transactions from{' '}
+                    <Text style={{ fontFamily: fontFamily.bold, color: colors.textPrimary }}>
+                      {params.merchant || 'this merchant'}
+                    </Text>
+                    .
+                  </Text>
+                </View>
+
+                {isTypingCustom ? (
+                  <View style={styles.customInputRow}>
+                    <TextInput
+                      value={customText}
+                      onChangeText={setCustomText}
+                      placeholder="Type custom category..."
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.customInput}
+                      autoFocus
+                      onSubmitEditing={() => selectCategory(customText)}
+                    />
+                    <Pressable
+                      onPress={() => selectCategory(customText)}
+                      style={styles.customSaveBtn}
+                    >
+                      <Text style={styles.customSaveText}>Set</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => setIsTypingCustom(true)}
+                    style={styles.addCustomBtn}
+                  >
+                    <Ionicons name="add-circle-outline" size={14} color={colors.accent} />
+                    <Text style={styles.addCustomText}>Custom category</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Merchant</Text>
               <Text style={styles.detailValue}>{params.merchant}</Text>
@@ -260,5 +369,136 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: fontFamily.semiBold,
     color: colors.textPrimary,
+  },
+  catBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent + '20',
+    borderWidth: 1,
+    borderColor: colors.accent + '44',
+  },
+  catBadgeUnknown: {
+    backgroundColor: colors.warn + '20',
+    borderColor: colors.warn + '44',
+  },
+  catBadgeText: {
+    fontSize: 11.5,
+    fontFamily: fontFamily.bold,
+    color: colors.accent,
+  },
+  changeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  changeBtnText: {
+    fontSize: 11,
+    fontFamily: fontFamily.bold,
+    color: colors.accent,
+  },
+  pickerBox: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pickerTitle: {
+    fontSize: 12,
+    fontFamily: fontFamily.bold,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
+  catChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.bgAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  catChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  catChipText: {
+    fontSize: 12,
+    fontFamily: fontFamily.medium,
+    color: colors.textSecondary,
+  },
+  catChipTextActive: {
+    color: colors.onAccent,
+    fontFamily: fontFamily.bold,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: spacing.xs,
+  },
+  customInput: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    height: 38,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  customSaveBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customSaveText: {
+    color: colors.onAccent,
+    fontFamily: fontFamily.bold,
+    fontSize: 12,
+  },
+  addCustomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    marginTop: 2,
+  },
+  addCustomText: {
+    fontSize: 12,
+    fontFamily: fontFamily.semiBold,
+    color: colors.accent,
+  },
+  ruleNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: colors.accent + '12',
+    padding: spacing.sm,
+    borderRadius: radius.sm,
+    marginBottom: spacing.sm,
+  },
+  ruleNoticeText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 16,
   },
 });

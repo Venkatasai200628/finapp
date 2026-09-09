@@ -42,7 +42,7 @@ export function summarizeParties(transactions: LedgerTransaction[], highVolumeTo
   const map = new Map<string, PartySummary>();
 
   for (const tx of transactions) {
-    const party = tx.merchant.trim() || 'Unknown';
+    const party = (tx.merchant ? String(tx.merchant).trim() : '') || 'Unknown';
     const row = map.get(party) ?? {
       party,
       paidOut: 0,
@@ -53,13 +53,14 @@ export function summarizeParties(transactions: LedgerTransaction[], highVolumeTo
       isHighVolume: false,
     };
 
+    const numAmt = Number.isFinite(Number(tx.amount)) ? Number(tx.amount) : 0;
     row.transactionCount += 1;
     if (isIncome(tx)) {
-      row.received += Math.abs(tx.amount);
-      row.net += Math.abs(tx.amount);
+      row.received += Math.abs(numAmt);
+      row.net += Math.abs(numAmt);
     } else {
-      row.paidOut += Math.abs(tx.amount);
-      row.net -= Math.abs(tx.amount);
+      row.paidOut += Math.abs(numAmt);
+      row.net -= Math.abs(numAmt);
     }
     row.totalVolume = row.paidOut + row.received;
     map.set(party, row);
@@ -79,13 +80,14 @@ export function buildLedgerOverview(transactions: LedgerTransaction[]): LedgerOv
   const incomeCat = new Map<string, number>();
 
   for (const tx of transactions) {
-    const abs = Math.abs(tx.amount);
+    const abs = Math.abs(Number.isFinite(Number(tx.amount)) ? Number(tx.amount) : 0);
+    const cat = (tx.category ? String(tx.category).trim() : '') || 'Uncategorized';
     if (isIncome(tx)) {
       totalIncome += abs;
-      incomeCat.set(tx.category, (incomeCat.get(tx.category) ?? 0) + abs);
+      incomeCat.set(cat, (incomeCat.get(cat) ?? 0) + abs);
     } else {
       totalExpense += abs;
-      expenseCat.set(tx.category, (expenseCat.get(tx.category) ?? 0) + abs);
+      expenseCat.set(cat, (expenseCat.get(cat) ?? 0) + abs);
     }
   }
 

@@ -16,15 +16,15 @@ export default function TransactionRow({
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
       <View style={[styles.avatar, isIncome ? styles.avatarIn : styles.avatarOut]}>
         <Text style={[styles.avatarText, { color: isIncome ? colors.income : colors.expense }]}>
-          {tx.merchant.charAt(0).toUpperCase()}
+          {(tx.merchant || '?').charAt(0).toUpperCase()}
         </Text>
       </View>
       <View style={{ flex: 1, marginRight: spacing.sm }}>
         <Text style={styles.merchant} numberOfLines={1}>
-          {tx.merchant}
+          {tx.merchant || 'Bank Transaction'}
         </Text>
         <Text style={styles.meta}>
-          {tx.category} · {tx.time}
+          {tx.category || 'Uncategorized'} · {tx.time || ''}
         </Text>
       </View>
       <Text style={[styles.amount, isIncome ? styles.income : styles.expense]}>{rupee(tx.amount, { signed: true })}</Text>

@@ -5,7 +5,7 @@ import { colors } from '../../constants/theme';
 export default function TabsLayout() {
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <FloatingTabBar {...(props as any)} />}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.bg },

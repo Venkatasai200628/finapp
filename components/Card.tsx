@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewProps } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 type Props = ViewProps & {
   elevated?: boolean;
@@ -8,8 +9,21 @@ type Props = ViewProps & {
 };
 
 export default function Card({ style, children, elevated, ...props }: Props) {
+  const { colors: themeColors } = useTheme();
+
   return (
-    <View style={[styles.wrap, elevated && styles.elevated, style]} {...props}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          backgroundColor: elevated ? themeColors.surfaceStrong : themeColors.surface,
+          borderColor: elevated ? themeColors.borderStrong : themeColors.border,
+        },
+        elevated && styles.elevated,
+        style,
+      ]}
+      {...props}
+    >
       {children}
     </View>
   );
@@ -19,14 +33,10 @@ const styles = StyleSheet.create({
   wrap: {
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     padding: spacing.lg,
     overflow: 'hidden',
   },
   elevated: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfaceStrong,
     ...shadow.card,
   },
 });

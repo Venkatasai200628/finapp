@@ -11,21 +11,18 @@ function parse(tx: StoredTransaction) {
 export function createTransactionsRouter(io: Server) {
   const router = Router();
 
-  // Every route below is per-user; nothing here is reachable unauthenticated.
-  router.use(requireAuth);
-
-  router.get('/transactions', (req: AuthedRequest, res) => {
+  router.get('/transactions', requireAuth, (req: AuthedRequest, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     res.json(listTransactions(req.userId!, limit).map(parse));
   });
 
-  router.get('/alerts', (req: AuthedRequest, res) => {
+  router.get('/alerts', requireAuth, (req: AuthedRequest, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, 100);
     res.json(listFlagged(req.userId!, limit).map(parse));
   });
 
   /** What the engine currently believes "normal" looks like for this user. */
-  router.get('/baseline', (req: AuthedRequest, res) => {
+  router.get('/baseline', requireAuth, (req: AuthedRequest, res) => {
     res.json(computeBaseline(req.userId!));
   });
 
@@ -34,7 +31,7 @@ export function createTransactionsRouter(io: Server) {
    * whether that transaction may teach the baseline (see isLearnable), so
    * confirmed fraud can never widen what counts as normal.
    */
-  router.post('/transactions/:id/verdict', (req: AuthedRequest, res) => {
+  router.post('/transactions/:id/verdict', requireAuth, (req: AuthedRequest, res) => {
     const { verdict } = req.body ?? {};
     if (verdict !== 'safe' && verdict !== 'fraud') {
       return res.status(400).json({ error: "verdict must be 'safe' or 'fraud'" });

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { fontFamily, colors, radius, rupee, spacing } from '../constants/theme';
 
 type Props = {

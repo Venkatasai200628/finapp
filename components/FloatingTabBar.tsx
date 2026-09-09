@@ -51,7 +51,7 @@ function press(navigation: BottomTabBarProps['navigation'], route: { key: string
 import { useTheme } from '../context/ThemeContext';
 
 function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
-  const { theme, toggleTheme, phoneView, togglePhoneView } = useTheme();
+  const { theme, toggleTheme, phoneView, togglePhoneView, colors: themeColors } = useTheme();
   const { name, username, initials } = useAuth();
   const insets = useSafeAreaInsets();
   const routes = visibleRoutes(state);
@@ -71,20 +71,36 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
   }));
 
   return (
-    <View style={[sidebarStyles.wrap, { paddingTop: insets.top + spacing.xl }]}>
+    <View
+      style={[
+        sidebarStyles.wrap,
+        {
+          backgroundColor: themeColors.panelSolid,
+          borderRightColor: themeColors.border,
+          paddingTop: insets.top + spacing.xl,
+        },
+      ]}
+    >
       <View style={sidebarStyles.brandRow}>
-        <View style={sidebarStyles.brandMark}>
-          <Ionicons name="flash" size={16} color={ON_ACCENT} />
+        <View dataSet={{ orange: 'true' }} style={[sidebarStyles.brandMark, { backgroundColor: colors.accent }]}>
+          <Ionicons name="flash" size={16} color="#FFFFFF" />
         </View>
         <View>
-          <Text style={sidebarStyles.brandText}>Fin</Text>
-          <Text style={sidebarStyles.brandSub}>Cash · Books · GST</Text>
+          <Text style={[sidebarStyles.brandText, { color: themeColors.textPrimary }]}>Fin</Text>
+          <Text style={[sidebarStyles.brandSub, { color: themeColors.textMuted }]}>Cash · Books · GST</Text>
         </View>
       </View>
 
-      <Text style={sidebarStyles.section}>Workspace</Text>
+      <Text style={[sidebarStyles.section, { color: themeColors.textMuted }]}>Workspace</Text>
       <View style={sidebarStyles.navList}>
-        <Animated.View style={[sidebarStyles.indicator, { height: itemHeight - 8 }, indicatorStyle]} />
+        <Animated.View
+          dataSet={{ orange: 'true' }}
+          style={[
+            sidebarStyles.indicator,
+            { height: itemHeight - 8, backgroundColor: colors.accent },
+            indicatorStyle,
+          ]}
+        />
         {routes.map((route) => {
           const focused = route.key === state.routes[state.index]?.key;
           const icons = ICONS[route.name] ?? { on: 'ellipse', off: 'ellipse-outline' };
@@ -92,14 +108,25 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
             <Pressable
               key={route.key}
               onPress={() => press(navigation, route, focused)}
-              style={[sidebarStyles.item, { height: itemHeight }]}
+              dataSet={focused ? { orange: 'true' } : undefined}
+              style={[
+                sidebarStyles.item,
+                { height: itemHeight },
+                focused && { backgroundColor: colors.accent, borderRadius: radius.sm },
+              ]}
             >
               <Ionicons
                 name={focused ? icons.on : icons.off}
                 size={18}
-                color={focused ? ON_ACCENT : colors.textMuted}
+                color={focused ? '#FFFFFF' : themeColors.textMuted}
               />
-              <Text style={[sidebarStyles.itemLabel, focused && sidebarStyles.itemLabelActive]}>
+              <Text
+                style={[
+                  sidebarStyles.itemLabel,
+                  { color: focused ? '#FFFFFF' : themeColors.textMuted },
+                  focused && { color: '#FFFFFF', fontFamily: fontFamily.bold },
+                ]}
+              >
                 {LABELS[route.name] ?? route.name}
               </Text>
             </Pressable>
@@ -107,39 +134,70 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
         })}
       </View>
 
-      <View style={sidebarStyles.footer}>
+      <View style={[sidebarStyles.footer, { borderTopColor: themeColors.borderSoft }]}>
         <View style={sidebarStyles.controlsRow}>
-          <Pressable onPress={togglePhoneView} style={[sidebarStyles.toolBtn, phoneView && sidebarStyles.toolBtnActive]}>
-            <Ionicons name={phoneView ? 'phone-portrait' : 'phone-portrait-outline'} size={15} color={phoneView ? colors.onAccent : colors.accent} />
-            <Text style={[sidebarStyles.toolBtnText, phoneView && sidebarStyles.toolBtnActiveText]}>
+          <Pressable
+            onPress={togglePhoneView}
+            dataSet={phoneView ? { orange: 'true' } : undefined}
+            style={[
+              sidebarStyles.toolBtn,
+              { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
+              phoneView && { backgroundColor: colors.accent, borderColor: colors.accent },
+            ]}
+          >
+            <Ionicons
+              name={phoneView ? 'phone-portrait' : 'phone-portrait-outline'}
+              size={15}
+              color={phoneView ? '#FFFFFF' : colors.accent}
+            />
+            <Text
+              style={[
+                sidebarStyles.toolBtnText,
+                { color: phoneView ? '#FFFFFF' : themeColors.textPrimary },
+                phoneView && { fontFamily: fontFamily.bold },
+              ]}
+            >
               Phone View
             </Text>
           </Pressable>
 
-          <Pressable onPress={toggleTheme} style={sidebarStyles.themeBtn}>
-            <Ionicons name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={16} color={colors.textPrimary} />
+          <Pressable
+            onPress={toggleTheme}
+            style={[
+              sidebarStyles.themeBtn,
+              { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
+            ]}
+          >
+            <Ionicons
+              name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'}
+              size={16}
+              color={themeColors.textPrimary}
+            />
           </Pressable>
         </View>
 
         <Pressable
-          style={sidebarStyles.userCard}
+          style={[
+            sidebarStyles.userCard,
+            { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
+          ]}
           onPress={() => {
             const settingsRoute = state.routes.find((r) => r.name === 'settings');
             if (settingsRoute) press(navigation, settingsRoute, false);
           }}
         >
-          <View style={sidebarStyles.userAvatar}>
-            <Text style={sidebarStyles.userAvatarText}>{initials || 'VS'}</Text>
+          <View dataSet={{ orange: 'true' }} style={[sidebarStyles.userAvatar, { backgroundColor: colors.accent }]}>
+            <Text style={[sidebarStyles.userAvatarText, { color: '#FFFFFF' }]}>{initials || 'VS'}</Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={sidebarStyles.userName} numberOfLines={1}>
+            <Text style={[sidebarStyles.userName, { color: themeColors.textPrimary }]} numberOfLines={1}>
               {name || 'Venkatasai'}
             </Text>
-            <Text style={sidebarStyles.userHandle} numberOfLines={1}>
+            <Text style={[sidebarStyles.userHandle, { color: themeColors.textMuted }]} numberOfLines={1}>
               @{username || 'venkatasai200628'}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={14} color={themeColors.textMuted} />
         </Pressable>
       </View>
     </View>
@@ -148,6 +206,7 @@ function Sidebar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navig
 
 function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
+  const { theme, colors: themeColors } = useTheme();
   const routes = visibleRoutes(state);
   const barWidth = 352;
   const tabWidth = barWidth / Math.max(routes.length, 1);
@@ -167,12 +226,19 @@ function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' 
 
   return (
     <View style={[pillStyles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} pointerEvents="box-none">
-      <View style={[pillStyles.bar, { width: barWidth }, shadow.floating]}>
-        <BlurView intensity={48} tint="dark" style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
+      <View style={[pillStyles.bar, { width: barWidth, borderColor: themeColors.borderStrong }, shadow.floating]}>
+        <BlurView intensity={48} tint={theme === 'dark' ? 'dark' : 'light'} style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]} />
         <View style={[StyleSheet.absoluteFill, { borderRadius: radius.xl, overflow: 'hidden' }]}>
-          <View style={pillStyles.tint} />
+          <View style={[pillStyles.tint, { backgroundColor: theme === 'dark' ? 'rgba(8, 8, 8, 0.92)' : 'rgba(255, 255, 255, 0.94)' }]} />
         </View>
-        <Animated.View style={[pillStyles.indicator, { width: tabWidth - 8 }, indicatorStyle]} />
+        <Animated.View
+          dataSet={{ orange: 'true' }}
+          style={[
+            pillStyles.indicator,
+            { width: tabWidth - 8, backgroundColor: colors.accent },
+            indicatorStyle,
+          ]}
+        />
         {routes.map((route) => {
           const focused = route.key === state.routes[state.index]?.key;
           const icons = ICONS[route.name] ?? { on: 'ellipse', off: 'ellipse-outline' };
@@ -180,14 +246,19 @@ function FloatingPillBar({ state, navigation }: Pick<BottomTabBarProps, 'state' 
             <Pressable
               key={route.key}
               onPress={() => press(navigation, route, focused)}
-              style={[pillStyles.tab, { width: tabWidth }]}
+              dataSet={focused ? { orange: 'true' } : undefined}
+              style={[
+                pillStyles.tab,
+                { width: tabWidth },
+                focused && { backgroundColor: colors.accent, borderRadius: radius.lg },
+              ]}
             >
               <Ionicons
                 name={focused ? icons.on : icons.off}
                 size={18}
-                color={focused ? ON_ACCENT : colors.textMuted}
+                color={focused ? '#FFFFFF' : themeColors.textMuted}
               />
-              {focused && <Text style={pillStyles.label}>{LABELS[route.name] ?? route.name}</Text>}
+              {focused && <Text style={[pillStyles.label, { color: '#FFFFFF' }]}>{LABELS[route.name] ?? route.name}</Text>}
             </Pressable>
           );
         })}

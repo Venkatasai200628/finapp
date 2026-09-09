@@ -48,6 +48,31 @@ function isExcel(name: string) {
   return lower.endsWith('.xlsx') || lower.endsWith('.xls');
 }
 
+const B64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function bytesToBase64(bytes: Uint8Array): string {
+  let result = '';
+  const len = bytes.length;
+  let i = 0;
+  for (; i + 2 < len; i += 3) {
+    result += B64_CHARS[bytes[i] >> 2];
+    result += B64_CHARS[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
+    result += B64_CHARS[((bytes[i + 1] & 15) << 2) | (bytes[i + 2] >> 6)];
+    result += B64_CHARS[bytes[i + 2] & 63];
+  }
+  if (i < len) {
+    result += B64_CHARS[bytes[i] >> 2];
+    if (i + 1 < len) {
+      result += B64_CHARS[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
+      result += B64_CHARS[(bytes[i + 1] & 15) << 2];
+      result += '=';
+    } else {
+      result += B64_CHARS[(bytes[i] & 3) << 4];
+      result += '==';
+    }
+  }
+  return result;
+}
+
 // ─── component ───────────────────────────────────────────────────────────────
 
 type Step = 'idle' | 'password' | 'parsed' | 'error';
@@ -133,57 +158,70 @@ export default function ImportStatementScreen() {
     setBusy(true);
 
     try {
-      let parsed: ParseResult;
+      let parsed: ParseResult | null = null;
 
-      // If backend is configured, send the file there to decrypt + parse
-      // (because React Native lacks the crypto keys to crack modern Excel files).
-      if (BACKEND_URL && token && fileAsset) {
-        if (Platform.OS === 'web') {
-          const fd = new FormData();
-          const file = (fileAsset as any).file;
-          if (file) {
-            fd.append('file', file);
-          } else {
-            const blob = new Blob([fileBytes as any], { type: 'application/octet-stream' });
-            fd.append('file', blob, fileName || 'statement.xlsx');
+      // 1. If backend URL is configured, use secure backend decryption (needed for modern bank-encrypted Excel)
+      if (BACKEND_URL) {
+        try {
+          const fileBase64 = bytesToBase64(fileBytes);
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
           }
-          if (pwd) fd.append('password', pwd);
 
-          const res = await fetch(`${BACKEND_URL}/api/parse-statement`, {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+          const res = await fetch(`${BACKEND_URL}/api/parse-statement-base64`, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-            body: fd,
+            headers,
+            body: JSON.stringify({
+              fileBase64,
+              filename: fileName || 'statement.xlsx',
+              password: pwd,
+            }),
+            signal: controller.signal,
           });
-          
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || `Server error: ${res.status}`);
-          }
-          parsed = await res.json();
-        } else {
-          // Native platforms (iOS/Android): use legacy expo-file-system uploadAsync
-          try {
-            const LegacyFS = require('expo-file-system/legacy');
-            const uploadResult = await LegacyFS.uploadAsync(`${BACKEND_URL}/api/parse-statement`, fileAsset.uri, {
-               httpMethod: 'POST',
-               uploadType: 1 /* MULTIPART */,
-               fieldName: 'file',
-               headers: { Authorization: `Bearer ${token}` },
-               parameters: pwd ? { password: pwd } : {},
-            });
+          clearTimeout(timeoutId);
 
-            if (uploadResult.status !== 200) {
-              const data = JSON.parse(uploadResult.body);
-              throw new Error(data.error || `Server error: ${uploadResult.status}`);
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            if (data?.error === 'WRONG_PASSWORD') {
+              setPasswordError('Wrong password. Please enter the correct password and try again.');
+              setBusy(false);
+              return;
             }
-            parsed = JSON.parse(uploadResult.body);
-          } catch (nativeErr: any) {
-            // If native upload fails or module not found, fallback to local parser
-            parsed = parseExcelStatement(fileBytes, pwd || undefined);
+            throw new Error(data?.message || data?.error || `Server status: ${res.status}`);
+          }
+
+          parsed = data as ParseResult;
+        } catch (backendErr: any) {
+          console.warn('Backend parse notice:', backendErr);
+          // If the user did NOT enter a password, try local parser
+          if (!pwd) {
+            try {
+              parsed = parseExcelStatement(fileBytes);
+            } catch {}
+          }
+
+          // If still no parsed result and password was entered, explain what happened accurately!
+          if (!parsed) {
+            const isTimeout = backendErr.name === 'AbortError';
+            const msg = isTimeout
+              ? 'Decryption server timed out waking up. Please tap "Open file" to try again.'
+              : `Decryption server could not be reached (${backendErr.message || 'connection issue'}). Please retry in a few seconds.`;
+            setPasswordError(msg);
+            setBusy(false);
+            return;
           }
         }
-      } else {
-        // Fallback: try parsing locally (only works for non-encrypted files)
+      }
+
+      // 2. Fallback if backend is not configured or offline without password
+      if (!parsed) {
         parsed = parseExcelStatement(fileBytes, pwd || undefined);
       }
 
@@ -201,9 +239,9 @@ export default function ImportStatementScreen() {
       setStep('parsed');
     } catch (e: any) {
       if (e.message === 'WRONG_PASSWORD') {
-         setPasswordError('Wrong password. Please enter the correct password and try again.');
+        setPasswordError('Wrong password. Please enter the correct password and try again.');
       } else {
-         setPasswordError(e instanceof Error ? e.message : 'Failed to parse file.');
+        setPasswordError(e instanceof Error ? e.message : 'Failed to parse file.');
       }
     } finally {
       setBusy(false);
@@ -212,12 +250,19 @@ export default function ImportStatementScreen() {
 
   // ── import into books ──────────────────────────────────────────────────────
   const handleImport = () => {
-    if (!result || result.rows.length === 0) return;
-    addImported(result.rows);
-    if (router.canGoBack()) {
-      router.back();
-    } else {
+    if (!result || !result.rows || result.rows.length === 0) return;
+    try {
+      addImported(result.rows);
       router.replace('/(tabs)/books');
+    } catch (err) {
+      console.error('Failed to import rows:', err);
+      try {
+        router.replace('/(tabs)/books');
+      } catch {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/books';
+        }
+      }
     }
   };
 

@@ -134,23 +134,26 @@ export type MonthlySnapshot = {
 };
 
 export function computeMonthlySnapshot(transactions: TxPoint[]): MonthlySnapshot | null {
-  const withTs = transactions.filter((t) => t.timestamp);
-  if (withTs.length < 2) return null;
+  const withTs = transactions.filter((t) => t.timestamp && Number.isFinite(t.timestamp));
+  if (withTs.length === 0) return null;
 
-  const byMonth = new Map<string, { income: number; expense: number }>();
+  const byMonth = new Map<string, { income: number; expense: number; order: number }>();
   for (const tx of withTs) {
     const d = new Date(tx.timestamp!);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    const row = byMonth.get(key) ?? { income: 0, expense: 0 };
+    const order = d.getFullYear() * 12 + d.getMonth();
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const row = byMonth.get(key) ?? { income: 0, expense: 0, order };
     const abs = Math.abs(tx.amount);
     if (isIncome(tx)) row.income += abs;
     else row.expense += abs;
     byMonth.set(key, row);
   }
 
-  const months = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const current = months[months.length - 1][1];
-  const previous = months.length > 1 ? months[months.length - 2][1] : current;
+  const months = [...byMonth.values()].sort((a, b) => a.order - b.order);
+  if (months.length === 0) return null;
+
+  const current = months[months.length - 1];
+  const previous = months.length > 1 ? months[months.length - 2] : current;
 
   const savings = current.income - current.expense;
   const savingsRate = current.income > 0 ? Math.round((savings / current.income) * 100) : 0;
@@ -205,18 +208,18 @@ export function computeMonthlyTrend(transactions: TxPoint[]): MonthlyTrendPoint[
 export type CategorySpend = { category: string; amount: number; color: string };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  Food: '#FF6B6B',
-  'Food & Dining': '#FF6B6B',
-  Groceries: '#FFB454',
-  Transport: '#5B8CFF',
-  Subscriptions: '#8B6BFF',
-  Subscription: '#8B6BFF',
-  Shopping: '#33D6A6',
-  Income: '#10b981',
-  Transfer: '#5B6B82',
-  Trading: '#00E5FF',
-  Uncategorized: '#5B6B82',
-  Other: '#5B6B82',
+  Food: '#FF6A00',
+  'Food & Dining': '#FF6A00',
+  Groceries: '#FF8C00',
+  Transport: '#3B82F6',
+  Subscriptions: '#8B5CF6',
+  Subscription: '#8B5CF6',
+  Shopping: '#EC4899',
+  Income: '#10B981',
+  Transfer: '#6366F1',
+  Trading: '#06B6D4',
+  Uncategorized: '#FF6A00',
+  Other: '#FF6A00',
 };
 
 export function computeCategorySpend(transactions: TxPoint[]): CategorySpend[] {

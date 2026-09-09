@@ -31,15 +31,25 @@ export default function BooksScreen() {
         subtitle="Upload, parties and category spend live here. GST stays on the GST tab."
       />
 
-      <Pressable style={[styles.upload, shadow.glow]} onPress={() => router.push('/import-statement')}>
-        <View style={styles.uploadIcon}>
-          <Ionicons name="cloud-upload-outline" size={22} color={colors.onAccent} />
+      <Pressable
+        dataSet={{ orange: 'true' }}
+        style={[
+          styles.upload,
+          { backgroundColor: colors.accent, borderColor: colors.accent },
+          shadow.glow,
+        ]}
+        onPress={() => router.push('/import-statement')}
+      >
+        <View style={[styles.uploadIcon, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
+          <Ionicons name="cloud-upload-outline" size={22} color="#FFFFFF" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.uploadTitle}>Upload bank CSV</Text>
-          <Text style={styles.uploadSub}>Pick a statement from your phone — no copy-paste</Text>
+          <Text style={[styles.uploadTitle, { color: '#FFFFFF' }]}>Upload bank statement</Text>
+          <Text style={[styles.uploadSub, { color: 'rgba(255, 255, 255, 0.90)' }]}>
+            Pick Excel (.xlsx, .xls) or CSV — instant analytics
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.onAccent} />
+        <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
       </Pressable>
 
       {empty ? (
@@ -70,7 +80,7 @@ export default function BooksScreen() {
             <StatCard
               label="Net"
               amount={ledger.netBalance}
-              color={colors.savings}
+              color={colors.accent}
               icon="swap-horizontal"
               onPress={() => router.push('/transactions')}
             />
@@ -93,8 +103,18 @@ export default function BooksScreen() {
 
           <View style={[styles.partyRow, twoCol && styles.partyRowWide]}>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
-              <Text style={styles.cardTitle}>Who you pay most</Text>
-              <Text style={styles.cardHint}>Tap any party to see their transactions.</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Who you pay most</Text>
+                  <Text style={styles.cardHint}>Tap any party to see expenses only.</Text>
+                </View>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/transactions', params: { type: 'expense' } })}
+                  style={{ backgroundColor: colors.expense + '18', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}
+                >
+                  <Text style={{ fontSize: 11, fontFamily: fontFamily.bold, color: colors.expense }}>All Expenses →</Text>
+                </Pressable>
+              </View>
               {ledger.topPayees.length === 0 ? (
                 <Text style={styles.muted}>No outgoing payments.</Text>
               ) : (
@@ -102,8 +122,18 @@ export default function BooksScreen() {
               )}
             </Card>
             <Card style={[styles.partyCard, twoCol && styles.partyCardWide]}>
-              <Text style={styles.cardTitle}>Who pays you</Text>
-              <Text style={styles.cardHint}>Tap any payer to see their deposits.</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Who pays you</Text>
+                  <Text style={styles.cardHint}>Tap any party to see income deposits only.</Text>
+                </View>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/transactions', params: { type: 'income' } })}
+                  style={{ backgroundColor: colors.income + '18', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill }}
+                >
+                  <Text style={{ fontSize: 11, fontFamily: fontFamily.bold, color: colors.income }}>All Income →</Text>
+                </Pressable>
+              </View>
               {ledger.topPayers.length === 0 ? (
                 <Text style={styles.muted}>No incoming payments.</Text>
               ) : (
@@ -182,12 +212,13 @@ const styles = StyleSheet.create({
   count: { fontSize: 12, color: colors.textMuted, fontFamily: fontFamily.medium },
   clear: {
     borderWidth: 1,
-    borderColor: colors.expense + '55',
+    borderColor: colors.accent,
+    backgroundColor: colors.accent + '15',
     borderRadius: radius.pill,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  clearText: { fontSize: 12, color: colors.expense, fontFamily: fontFamily.semiBold },
+  clearText: { fontSize: 12, color: colors.accent, fontFamily: fontFamily.bold },
   card: { marginBottom: spacing.lg },
   cardTitle: { fontSize: 15, fontFamily: fontFamily.semiBold, color: colors.textPrimary, marginBottom: 4 },
   cardHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },

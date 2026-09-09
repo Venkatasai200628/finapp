@@ -40,47 +40,64 @@ function injectOrUpdateThemeStyles() {
         const rule = rules[i] as CSSStyleRule;
         if (!rule.selectorText || !rule.cssText) continue;
         const text = rule.cssText;
+        const norm = text.replace(/\s+/g, '');
 
-        // Never override accent orange (#FF6A00 / rgb(255,106,0))
-        if (text.includes('255,106,0') || text.includes('255, 106, 0') || text.includes('ff6a00') || text.includes('FF6A00')) {
+        // NEVER touch transparent backgrounds (opacity 0)
+        if (
+          norm.includes('rgba(0,0,0,0)') ||
+          norm.includes('rgba(0,0,0,0.00)') ||
+          norm.includes('transparent')
+        ) {
           continue;
         }
 
-        // Dark background -> Pure white background in light theme
-        if (
-          text.includes('background-color:rgba(0,0,0,1') ||
-          text.includes('background-color:rgba(5,5,5,1') ||
-          text.includes('background-color:rgba(8,8,8,1') ||
-          text.includes('background-color:rgba(10,10,10,1') ||
-          text.includes('background-color:rgba(12,12,12,1') ||
-          text.includes('background-color:rgba(14,14,14,1') ||
-          text.includes('background-color:rgba(17,17,17,1') ||
-          text.includes('background-color:rgba(20,20,20,1')
-        ) {
-          rnwOverrides += `.light-theme ${rule.selectorText} { background-color: #FFFFFF !important; }\n`;
-        } else if (
-          text.includes('background-color:rgba(24,24,24,1') ||
-          text.includes('background-color:rgba(28,28,28,1') ||
-          text.includes('background-color:rgba(31,31,31,1') ||
-          text.includes('background-color:rgba(34,34,34,1')
-        ) {
-          rnwOverrides += `.light-theme ${rule.selectorText} { background-color: #F3F4F6 !important; }\n`;
+        // Never override accent orange (#FF6A00 / rgb(255,106,0))
+        if (norm.includes('255,106,0') || norm.includes('ff6a00') || norm.includes('FF6A00')) {
+          continue;
         }
 
-        // White text -> Black text in light theme
-        if (text.includes('color:rgba(255,255,255,1')) {
-          rnwOverrides += `.light-theme ${rule.selectorText} { color: #000000 !important; }\n`;
-        } else if (
-          text.includes('color:rgba(153,153,153,1') ||
-          text.includes('color:rgba(92,92,92,1') ||
-          text.includes('color:rgba(102,102,102,1')
+        // Dark background -> Pure white background in light theme (ONLY solid backgrounds)
+        if (
+          norm.includes('background-color:rgba(0,0,0,1') ||
+          norm.includes('background-color:rgb(0,0,0)') ||
+          norm.includes('background-color:#000000') ||
+          norm.includes('background-color:rgba(10,10,10,1') ||
+          norm.includes('background-color:rgb(10,10,10)') ||
+          norm.includes('background-color:rgba(18,18,18,1') ||
+          norm.includes('background-color:rgb(18,18,18)') ||
+          norm.includes('background-color:rgba(21,21,21,1') ||
+          norm.includes('background-color:rgb(21,21,21)')
         ) {
-          rnwOverrides += `.light-theme ${rule.selectorText} { color: #4B5563 !important; }\n`;
+          rnwOverrides += `.light-theme ${rule.selectorText}:not([data-orange="true"]):not(.fin-orange) { background-color: #FFFFFF !important; }\n`;
+        } else if (
+          norm.includes('background-color:rgba(24,24,24,1') ||
+          norm.includes('background-color:rgba(30,30,30,1') ||
+          norm.includes('background-color:rgba(38,38,38,1') ||
+          norm.includes('background-color:rgba(48,48,48,1')
+        ) {
+          rnwOverrides += `.light-theme ${rule.selectorText}:not([data-orange="true"]):not(.fin-orange) { background-color: #F3F4F6 !important; }\n`;
+        }
+
+        // White text -> Black text in light theme, BUT NEVER on orange elements!
+        if (
+          norm.includes('color:rgba(255,255,255,1') ||
+          norm.includes('color:rgb(255,255,255)') ||
+          norm.includes('color:#ffffff') ||
+          norm.includes('color:#fff')
+        ) {
+          rnwOverrides += `.light-theme ${rule.selectorText}:not([data-orange="true"]):not([data-orange="true"] *):not(.fin-orange):not(.fin-orange *) { color: #000000 !important; }\n`;
+        } else if (
+          norm.includes('color:rgba(160,160,160') ||
+          norm.includes('color:rgba(112,112,112') ||
+          norm.includes('color:rgba(153,153,153') ||
+          norm.includes('color:rgba(102,102,102')
+        ) {
+          rnwOverrides += `.light-theme ${rule.selectorText}:not([data-orange="true"]):not([data-orange="true"] *):not(.fin-orange):not(.fin-orange *) { color: #4B5563 !important; }\n`;
         }
 
         // White borders -> Subtle dark borders in light theme
-        if (text.includes('border-bottom-color:rgba(255,255,255') || text.includes('border-color:rgba(255,255,255')) {
-          rnwOverrides += `.light-theme ${rule.selectorText} { border-color: rgba(0,0,0,0.08) !important; }\n`;
+        if (norm.includes('border-color:rgba(255,255,255') || norm.includes('border-bottom-color:rgba(255,255,255')) {
+          rnwOverrides += `.light-theme ${rule.selectorText}:not([data-orange="true"]) { border-color: rgba(0,0,0,0.08) !important; }\n`;
         }
       }
     } catch {}
@@ -92,16 +109,13 @@ function injectOrUpdateThemeStyles() {
       background-color: #000000 !important;
       color: #FFFFFF !important;
     }
-    body:not(.light-theme) div {
-      border-color: rgba(255, 255, 255, 0.08);
-    }
 
-    /* LIGHT MODE: completely white background, black text, orange mix */
+    /* LIGHT MODE: completely white background, black text */
     body.light-theme, #root.light-theme {
       background-color: #FFFFFF !important;
       color: #000000 !important;
     }
-    .light-theme div:not([style*="color"]):not([style*="background"]) {
+    .light-theme div:not([style*="color"]):not([style*="background"]):not([data-orange="true"]):not([data-orange="true"] *) {
       color: #000000;
     }
     .light-theme input, .light-theme textarea {
@@ -110,71 +124,59 @@ function injectOrUpdateThemeStyles() {
       border-color: rgba(0, 0, 0, 0.12) !important;
     }
 
-    /* Attribute-based fallback overrides for Light Mode */
-    .light-theme [style*="background-color: rgb(0, 0, 0)"],
-    .light-theme [style*="background-color: #000000"],
-    .light-theme [style*="background-color: rgb(5, 5, 5)"],
-    .light-theme [style*="background-color: #050505"],
-    .light-theme [style*="background-color: rgb(8, 8, 8)"],
-    .light-theme [style*="background-color: #080808"],
-    .light-theme [style*="background-color: rgb(10, 10, 10)"],
-    .light-theme [style*="background-color: #0A0A0A"],
-    .light-theme [style*="background-color: rgb(12, 12, 12)"],
-    .light-theme [style*="background-color: #0C0C0C"],
-    .light-theme [style*="background-color: rgb(17, 17, 17)"],
-    .light-theme [style*="background-color: #111111"],
-    .light-theme [style*="background-color: rgb(20, 20, 20)"],
-    .light-theme [style*="background-color: #141414"] {
+    /* Fallback solid dark backgrounds -> pure white in Light Mode */
+    .light-theme [style*="background-color: rgb(0, 0, 0)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #000000"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(10, 10, 10)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #0A0A0A"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(18, 18, 18)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #121212"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(21, 21, 21)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #151515"]:not([data-orange="true"]) {
       background-color: #FFFFFF !important;
     }
 
-    .light-theme [style*="background-color: rgb(24, 24, 24)"],
-    .light-theme [style*="background-color: #181818"],
-    .light-theme [style*="background-color: rgb(28, 28, 28)"],
-    .light-theme [style*="background-color: #1C1C1C"],
-    .light-theme [style*="background-color: rgb(31, 31, 31)"],
-    .light-theme [style*="background-color: #1F1F1F"],
-    .light-theme [style*="background-color: rgb(34, 34, 34)"],
-    .light-theme [style*="background-color: #222222"] {
+    .light-theme [style*="background-color: rgb(24, 24, 24)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #181818"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(30, 30, 30)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #1E1E1E"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(38, 38, 38)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #262626"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: rgb(48, 48, 48)"]:not([data-orange="true"]),
+    .light-theme [style*="background-color: #303030"]:not([data-orange="true"]) {
       background-color: #F3F4F6 !important;
     }
 
-    .light-theme [style*="color: rgb(255, 255, 255)"],
-    .light-theme [style*="color: #FFFFFF"],
-    .light-theme [style*="color: #fff"] {
-      color: #000000 !important;
-    }
-
-    .light-theme [style*="color: rgb(153, 153, 153)"],
-    .light-theme [style*="color: #999999"] {
-      color: #4B5563 !important;
-    }
-
-    .light-theme [style*="color: rgb(92, 92, 92)"],
-    .light-theme [style*="color: #5C5C5C"],
-    .light-theme [style*="color: rgb(102, 102, 102)"],
-    .light-theme [style*="color: #666666"] {
-      color: #6B7280 !important;
-    }
-
-    .light-theme [style*="border-color: rgba(255, 255, 255"],
-    .light-theme [style*="border-top-color: rgba(255, 255, 255"],
-    .light-theme [style*="border-bottom-color: rgba(255, 255, 255"],
-    .light-theme [style*="border-left-color: rgba(255, 255, 255"],
-    .light-theme [style*="border-right-color: rgba(255, 255, 255"] {
-      border-color: rgba(0, 0, 0, 0.08) !important;
-    }
-
-    /* Orange accent: preserved across both dark & light themes */
+    /* ORANGE ACCENTS: GUARANTEED TO REMAIN VIBRANT ORANGE IN BOTH DARK AND LIGHT THEMES */
+    .fin-orange,
+    [data-orange="true"],
+    .r-1xck43y,
+    .light-theme .fin-orange,
+    .light-theme [data-orange="true"],
+    .light-theme .r-1xck43y,
     .light-theme [style*="background-color: rgb(255, 106, 0)"],
     .light-theme [style*="background-color: #FF6A00"],
-    .light-theme [style*="background-color: #ff6a00"] {
+    .light-theme [style*="background-color: #ff6a00"],
+    .light-theme [style*="background-color:#FF6A00"],
+    .light-theme [style*="background-color:#ff6a00"] {
       background-color: #FF6A00 !important;
+      border-color: #FF6A00 !important;
     }
+
+    /* ALL TEXT AND ICONS ON ORANGE ACCENTS MUST ALWAYS BE CRISP WHITE */
+    .fin-orange *,
+    [data-orange="true"] *,
+    .r-1xck43y *,
+    .light-theme .fin-orange *,
+    .light-theme [data-orange="true"] *,
+    .light-theme .r-1xck43y *,
     .light-theme [style*="background-color: rgb(255, 106, 0)"] *,
     .light-theme [style*="background-color: #FF6A00"] *,
-    .light-theme [style*="background-color: #ff6a00"] * {
+    .light-theme [style*="background-color: #ff6a00"] *,
+    .light-theme [style*="background-color:#FF6A00"] *,
+    .light-theme [style*="background-color:#ff6a00"] * {
       color: #FFFFFF !important;
+      fill: #FFFFFF !important;
     }
 
     /* Dynamic React Native Web overrides */
@@ -183,8 +185,22 @@ function injectOrUpdateThemeStyles() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<ThemeMode>('dark');
-  const [phoneView, setPhoneView] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('fin.theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    }
+    return 'dark';
+  });
+  const [phoneView, setPhoneView] = useState<boolean>(() => {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('fin.phoneView');
+      if (saved === 'false') return false;
+      if (saved === 'true') return true;
+    }
+    // Default to true on web as requested so the mobile experience is front and center
+    return true;
+  });
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -192,16 +208,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
       if (theme === 'light') {
         document.body.classList.add('light-theme');
+        document.documentElement.classList.add('light-theme');
+        document.body.style.backgroundColor = '#FFFFFF';
+        document.documentElement.style.backgroundColor = '#FFFFFF';
         const root = document.getElementById('root');
-        if (root) root.classList.add('light-theme');
+        if (root) {
+          root.classList.add('light-theme');
+          root.style.backgroundColor = '#FFFFFF';
+        }
       } else {
         document.body.classList.remove('light-theme');
+        document.documentElement.classList.remove('light-theme');
+        document.body.style.backgroundColor = '#000000';
+        document.documentElement.style.backgroundColor = '#000000';
         const root = document.getElementById('root');
-        if (root) root.classList.remove('light-theme');
+        if (root) {
+          root.classList.remove('light-theme');
+          root.style.backgroundColor = '#000000';
+        }
       }
 
-      // Re-scan after short delay to catch any late-injected component styles
-      const timer = setTimeout(injectOrUpdateThemeStyles, 300);
+      try {
+        localStorage.setItem('fin.theme', theme);
+      } catch {}
+
+      const timer = setTimeout(injectOrUpdateThemeStyles, 200);
       return () => clearTimeout(timer);
     }
   }, [theme]);
@@ -211,7 +242,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const togglePhoneView = () => {
-    setPhoneView((prev) => !prev);
+    setPhoneView((prev) => {
+      const next = !prev;
+      if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('fin.phoneView', String(next));
+        } catch {}
+      }
+      return next;
+    });
   };
 
   const activeColors = theme === 'dark' ? darkColors : lightColors;

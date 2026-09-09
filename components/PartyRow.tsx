@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { PartySummary } from '../lib/ledgerAnalytics';
 import { colors, fontFamily, radius, rupee, spacing } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 type Props = {
   party: PartySummary;
@@ -11,10 +12,12 @@ type Props = {
 };
 
 export default function PartyRow({ party, mode, onPress }: Props) {
+  const { colors: themeColors } = useTheme();
+
   const primary =
     mode === 'payee' ? party.paidOut : mode === 'payer' ? party.received : party.totalVolume;
   const primaryLabel = mode === 'payee' ? 'Paid out' : mode === 'payer' ? 'Received' : 'Volume';
-  const primaryColor = mode === 'payer' ? colors.income : colors.expense;
+  const primaryColor = mode === 'payer' ? themeColors.income : themeColors.expense;
 
   const handlePress = () => {
     if (onPress) {
@@ -22,33 +25,40 @@ export default function PartyRow({ party, mode, onPress }: Props) {
     } else {
       router.push({
         pathname: '/transactions',
-        params: { search: party.party },
+        params: {
+          search: party.party,
+          type: mode === 'payee' ? 'expense' : mode === 'payer' ? 'income' : undefined,
+        },
       });
     }
   };
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7, backgroundColor: colors.surfaceAlt }]}
+      style={({ pressed }) => [
+        styles.row,
+        { borderBottomColor: themeColors.borderSoft },
+        pressed && { opacity: 0.7, backgroundColor: themeColors.surfaceAlt },
+      ]}
       onPress={handlePress}
     >
       <View style={styles.left}>
         <View style={[styles.avatar, { backgroundColor: primaryColor + '22' }]}>
-          <Text style={[styles.avatarText, { color: primaryColor }]}>{party.party.charAt(0).toUpperCase()}</Text>
+          <Text style={[styles.avatarText, { color: primaryColor }]}>{(party.party || '?').charAt(0).toUpperCase()}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>
-              {party.party}
+            <Text style={[styles.name, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              {party.party || 'Unknown'}
             </Text>
             {party.isHighVolume && (
               <View style={styles.badge}>
-                <Ionicons name="star" size={10} color={colors.warn} />
-                <Text style={styles.badgeText}>Top</Text>
+                <Ionicons name="star" size={10} color={themeColors.warn} />
+                <Text style={[styles.badgeText, { color: themeColors.warn }]}>Top</Text>
               </View>
             )}
           </View>
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: themeColors.textMuted }]}>
             {party.transactionCount} txn · Net {rupee(Math.round(party.net))}
           </Text>
         </View>
@@ -56,8 +66,8 @@ export default function PartyRow({ party, mode, onPress }: Props) {
       <View style={styles.right}>
         <Text style={[styles.amount, { color: primaryColor }]}>{rupee(Math.round(primary))}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
-          <Text style={styles.amountLabel}>{primaryLabel}</Text>
-          <Ionicons name="chevron-forward" size={12} color={colors.textMuted} />
+          <Text style={[styles.amountLabel, { color: themeColors.textMuted }]}>{primaryLabel}</Text>
+          <Ionicons name="chevron-forward" size={12} color={themeColors.textMuted} />
         </View>
       </View>
     </Pressable>
